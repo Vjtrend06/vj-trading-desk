@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CryptoJournal — Personal Trading Log</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:       #0a0c0f;
+    --bg2:      #10141a;
+    --bg3:      #161b24;
+    --border:   #1e2630;
+    --border2:  #2a3340;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --muted2:   #4a5568;
+    --green:    #00d4aa;
+    --green2:   #00a37a;
+    --red:      #ff4d6a;
+    --red2:     #cc2244;
+    --amber:    #f59e0b;
+    --blue:     #3b82f6;
+    --accent:   #00d4aa;
+    --radius:   8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  /* ── Layout ── */
+  .shell { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+  }
+  .sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-mark {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--green);
+    letter-spacing: -0.5px;
+  }
+  .logo-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .nav { padding: 16px 0; flex: 1; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    transition: all .15s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { color: var(--text); background: var(--bg3); }
+  .nav-item.active { color: var(--green); border-left-color: var(--green); background: rgba(0,212,170,0.05); }
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+  .sidebar-stats {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .sidebar-bal { font-size: 18px; font-weight: 700; color: var(--green); font-family: 'Syne', sans-serif; margin-bottom: 2px; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    height: 56px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .page-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); }
+  .topbar-actions { display: flex; gap: 10px; align-items: center; }
+  .content { flex: 1; overflow-y: auto; padding: 24px 28px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all .15s;
+    letter-spacing: 0.3px;
+  }
+  .btn-primary { background: var(--green); color: #0a0c0f; border-color: var(--green); }
+  .btn-primary:hover { background: var(--green2); }
+  .btn-outline { background: transparent; color: var(--muted); border-color: var(--border2); }
+  .btn-outline:hover { color: var(--text); border-color: var(--muted2); }
+  .btn-danger { background: transparent; color: var(--red); border-color: var(--red2); }
+  .btn-danger:hover { background: rgba(255,77,106,0.1); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  /* ── Stats grid ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.red::before { background: var(--red); }
+  .stat-card.amber::before { background: var(--amber); }
+  .stat-card.blue::before { background: var(--blue); }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 700; }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.blue { color: var(--blue); }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* ── Charts row ── */
+  .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 22px; }
+  .chart-wrap { position: relative; height: 220px; }
+
+  /* ── Trades table ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { border-bottom: 1px solid var(--border2); }
+  th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  td {
+    padding: 11px 14px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tr:hover td { background: var(--bg3); }
+  tr:last-child td { border-bottom: none; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-long { background: rgba(0,212,170,0.12); color: var(--green); }
+  .badge-short { background: rgba(255,77,106,0.12); color: var(--red); }
+  .badge-open { background: rgba(245,158,11,0.12); color: var(--amber); }
+  .badge-closed { background: rgba(100,116,139,0.12); color: var(--muted); }
+  .pnl-pos { color: var(--green); font-weight: 600; }
+  .pnl-neg { color: var(--red); font-weight: 600; }
+  .coin-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .coin-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+  }
+  .actions-col { display: flex; gap: 6px; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 28px;
+    width: 520px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 22px;
+    color: var(--green);
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+  input, select, textarea {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .15s;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--green); }
+  select option { background: var(--bg3); }
+  textarea { resize: vertical; min-height: 70px; }
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+  /* ── Emotion tags ── */
+  .emotion-grid { display: flex; flex-wrap: wrap; gap: 7px; }
+  .emotion-tag {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all .15s;
+    color: var(--muted);
+  }
+  .emotion-tag:hover, .emotion-tag.sel { border-color: var(--green); color: var(--green); background: rgba(0,212,170,0.08); }
+
+  /* ── Analytics ── */
+  .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 22px; }
+  .heatmap { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .hm-cell {
+    height: 20px;
+    border-radius: 3px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    transition: all .15s;
+    cursor: default;
+  }
+  .hm-cell.win { background: rgba(0,212,170,0.4); border-color: var(--green); }
+  .hm-cell.loss { background: rgba(255,77,106,0.35); border-color: var(--red); }
+  .hm-cell.neutral { background: rgba(245,158,11,0.3); border-color: var(--amber); }
+  .hm-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 4px; }
+  .hm-day { font-size: 9px; color: var(--muted); text-align: center; text-transform: uppercase; }
+
+  /* ── CSV ── */
+  .csv-drop {
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    color: var(--muted);
+  }
+  .csv-drop:hover { border-color: var(--green); color: var(--text); }
+  .csv-drop input { display: none; }
+  .csv-icon { font-size: 36px; margin-bottom: 10px; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted2); }
+
+  /* ── Tag filter ── */
+  .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-tag {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    font-size: 11px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all .15s;
+  }
+  .filter-tag.active { border-color: var(--green); color: var(--green); background: rgba(0,212,170,0.07); }
+
+  /* ── Ticker badge colors ── */
+  .c-btc  { color: #f7931a; }
+  .c-eth  { color: #627eea; }
+  .c-sol  { color: #9945ff; }
+  .c-bnb  { color: #f3ba2f; }
+  .c-xrp  { color: #00aae4; }
+  .c-doge { color: #c2a633; }
+  .c-def  { color: var(--green); }
+
+  /* empty state */
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-title { font-size: 16px; color: var(--text); font-family: 'Syne', sans-serif; margin-bottom: 6px; }
+
+  /* ── Tooltip ── */
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 4px 9px;
+    border-radius: 5px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 99;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">₿ CryptoJournal</div>
+      <div class="logo-sub">Personal Trading Log</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="goPage('dashboard',this)">
+        <span class="nav-icon">⬛</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="goPage('trades',this)">
+        <span class="nav-icon">📋</span> Trade Log
+      </div>
+      <div class="nav-item" onclick="goPage('analytics',this)">
+        <span class="nav-icon">📊</span> Analytics
+      </div>
+      <div class="nav-item" onclick="goPage('journal',this)">
+        <span class="nav-icon">✏️</span> Notes & Feelings
+      </div>
+      <div class="nav-item" onclick="goPage('import',this)">
+        <span class="nav-icon">⬆️</span> Import CSV
+      </div>
+    </nav>
+    <div class="sidebar-stats">
+      <div style="margin-bottom:4px;font-size:10px;text-transform:uppercase;letter-spacing:1px;">Total P&L</div>
+      <div class="sidebar-bal" id="sidebar-pnl">$0.00</div>
+      <div style="margin-top:8px;font-size:10px;color:var(--muted);">
+        <span id="sidebar-trades">0</span> trades &nbsp;·&nbsp;
+        <span id="sidebar-wr">0%</span> win rate
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <header class="topbar">
+      <div class="page-title" id="topbar-title">Dashboard</div>
+      <div class="topbar-actions">
+        <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="btn btn-primary" onclick="openModal()">+ Add Trade</button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card green">
+            <div class="stat-label">Total P&L</div>
+            <div class="stat-value green" id="stat-pnl">$0.00</div>
+            <div class="stat-sub" id="stat-pnl-sub">All time</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-label">Win Rate</div>
+            <div class="stat-value amber" id="stat-wr">0%</div>
+            <div class="stat-sub" id="stat-wr-sub">0W / 0L</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Total Trades</div>
+            <div class="stat-value blue" id="stat-total">0</div>
+            <div class="stat-sub" id="stat-total-sub">0 open</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-label">Avg Risk/Reward</div>
+            <div class="stat-value" id="stat-rr" style="color:var(--blue)">0:0</div>
+            <div class="stat-sub">Per closed trade</div>
+          </div>
+        </div>
+
+        <div class="charts-row">
+          <div class="card">
+            <div class="card-title">Cumulative P&L</div>
+            <div class="chart-wrap"><canvas id="pnl-chart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Win vs Loss</div>
+            <div class="chart-wrap"><canvas id="donut-chart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Recent Trades</div>
+          <div class="table-wrap" id="recent-table"></div>
+        </div>
+      </div>
+
+      <!-- ══ TRADE LOG ══ -->
+      <div class="page" id="page-trades">
+        <div class="filter-row">
+          <span style="font-size:11px;color:var(--muted);margin-right:4px;">Filter:</span>
+          <div class="filter-tag active" onclick="filterTrades('all',this)">All</div>
+          <div class="filter-tag" onclick="filterTrades('LONG',this)">Long</div>
+          <div class="filter-tag" onclick="filterTrades('SHORT',this)">Short</div>
+          <div class="filter-tag" onclick="filterTrades('open',this)">Open</div>
+          <div class="filter-tag" onclick="filterTrades('closed',this)">Closed</div>
+          <div class="filter-tag" onclick="filterTrades('win',this)">Winners</div>
+          <div class="filter-tag" onclick="filterTrades('loss',this)">Losers</div>
+        </div>
+        <div class="card">
+          <div class="table-wrap" id="trades-table"></div>
+        </div>
+      </div>
+
+      <!-- ══ ANALYTICS ══ -->
+      <div class="page" id="page-analytics">
+        <div class="stats-grid">
+          <div class="stat-card green">
+            <div class="stat-label">Best Trade</div>
+            <div class="stat-value green" id="an-best">$0</div>
+            <div class="stat-sub" id="an-best-coin">—</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-label">Worst Trade</div>
+            <div class="stat-value red" id="an-worst">$0</div>
+            <div class="stat-sub" id="an-worst-coin">—</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-label">Avg Win</div>
+            <div class="stat-value amber" id="an-avg-win">$0</div>
+            <div class="stat-sub">Per winning trade</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Avg Loss</div>
+            <div class="stat-value blue" id="an-avg-loss">$0</div>
+            <div class="stat-sub">Per losing trade</div>
+          </div>
+        </div>
+        <div class="analytics-grid">
+          <div class="card">
+            <div class="card-title">P&L by Coin</div>
+            <div class="chart-wrap"><canvas id="coin-chart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Trade Size Distribution</div>
+            <div class="chart-wrap"><canvas id="size-chart"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Monthly P&L</div>
+          <div class="chart-wrap" style="height:200px"><canvas id="monthly-chart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ══ NOTES & FEELINGS ══ -->
+      <div class="page" id="page-journal">
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">Add Journal Entry</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div class="form-group">
+              <label>Date</label>
+              <input type="date" id="j-date">
+            </div>
+            <div class="form-group">
+              <label>Mood</label>
+              <select id="j-mood">
+                <option value="confident">😎 Confident</option>
+                <option value="neutral">😐 Neutral</option>
+                <option value="anxious">😬 Anxious</option>
+                <option value="fomo">🔥 FOMO</option>
+                <option value="revenge">😤 Revenge Mode</option>
+                <option value="calm">🧘 Calm & Focused</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label>Market Conditions</label>
+            <input type="text" id="j-market" placeholder="e.g. BTC ranging, high volatility, ETH breakout...">
+          </div>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label>Notes / Reflection</label>
+            <textarea id="j-notes" placeholder="What went well? What mistakes? What will you improve?"></textarea>
+          </div>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label>Trade Emotions</label>
+            <div class="emotion-grid">
+              <div class="emotion-tag" onclick="toggleEmotion(this)">Fear</div>
+              <div class="emotion-tag" onclick="toggleEmotion(this)">Greed</div>
+              <div class="emotion-tag" onclick="toggleEmotion(this)">FOMO</div>
+              <div class="emotion-tag" onclick="toggleEmotion(this)">Overconfidence</div>
+              <div class="emotion-tag" onclick="toggleEmotion(this)">Revenge Trade</div>
+              <div class="emotion-tag" onclick="toggleEmotion(this)">Patience</div>
+              <div class="emotion-tag" onclick="toggleEmotion(this)">Discipline</div>
+              <div class="emotion-tag" onclick="toggleEmotion(this)">Impulsive</div>
+              <div class="emotion-tag" onclick="toggleEmotion(this)">Calm</div>
+              <div class="emotion-tag" onclick="toggleEmotion(this)">Stressed</div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="addJournalEntry()">Save Entry</button>
+        </div>
+        <div id="journal-entries"></div>
+      </div>
+
+      <!-- ══ IMPORT CSV ══ -->
+      <div class="page" id="page-import">
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">Import Trades via CSV</div>
+          <div class="csv-drop" onclick="document.getElementById('csv-input').click()">
+            <div class="csv-icon">📂</div>
+            <div style="font-size:14px;font-family:'Syne',sans-serif;font-weight:700;margin-bottom:6px;color:var(--text)">Drop CSV file here</div>
+            <div style="font-size:12px;margin-bottom:16px;">or click to browse</div>
+            <div class="btn btn-outline" style="display:inline-flex;">Choose File</div>
+            <input type="file" id="csv-input" accept=".csv" onchange="handleCSV(event)">
+          </div>
+          <div style="margin-top:20px;padding:16px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Expected CSV columns</div>
+            <div style="font-size:12px;color:var(--green);font-family:'JetBrains Mono',monospace;">
+              date, coin, direction, entry, exit, quantity, fee, setup, notes
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:8px;">
+              date: YYYY-MM-DD &nbsp;·&nbsp; direction: LONG or SHORT &nbsp;·&nbsp; exit: leave blank if open
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <button class="btn btn-outline btn-sm" onclick="loadSampleData()">⚡ Load Sample Trades (Demo)</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">CSV Preview</div>
+          <div id="csv-preview" style="color:var(--muted);font-size:12px;">No file loaded yet.</div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ── ADD TRADE MODAL ── -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">+ New Trade</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Coin / Pair</label>
+        <input type="text" id="f-coin" placeholder="BTC, ETH, SOL..." style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label>Direction</label>
+        <select id="f-dir">
+          <option value="LONG">LONG</option>
+          <option value="SHORT">SHORT</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Entry Price ($)</label>
+        <input type="number" id="f-entry" placeholder="0.00" step="any">
+      </div>
+      <div class="form-group">
+        <label>Exit Price ($) <span style="color:var(--muted);font-size:10px;">(blank = open)</span></label>
+        <input type="number" id="f-exit" placeholder="0.00" step="any">
+      </div>
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" id="f-qty" placeholder="0.00" step="any">
+      </div>
+      <div class="form-group">
+        <label>Fee ($)</label>
+        <input type="number" id="f-fee" placeholder="0.00" step="any">
+      </div>
+      <div class="form-group">
+        <label>Stop Loss ($)</label>
+        <input type="number" id="f-sl" placeholder="0.00" step="any">
+      </div>
+      <div class="form-group">
+        <label>Take Profit ($)</label>
+        <input type="number" id="f-tp" placeholder="0.00" step="any">
+      </div>
+      <div class="form-group">
+        <label>Exchange</label>
+        <select id="f-exchange">
+          <option>Binance</option>
+          <option>Bybit</option>
+          <option>Coinbase</option>
+          <option>OKX</option>
+          <option>KuCoin</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="form-group full">
+        <label>Setup / Strategy</label>
+        <input type="text" id="f-setup" placeholder="Breakout, Support bounce, EMA cross...">
+      </div>
+      <div class="form-group full">
+        <label>Notes</label>
+        <textarea id="f-notes" placeholder="Why did you take this trade? What was your thesis?"></textarea>
+      </div>
+    </div>
+    <div id="f-pnl-preview" style="display:none;margin-top:14px;padding:12px 16px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);font-size:13px;"></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTrade()">Save Trade</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let trades = JSON.parse(localStorage.getItem('cj_trades') || '[]');
+let journal = JSON.parse(localStorage.getItem('cj_journal') || '[]');
+let editId = null;
+let tradeFilter = 'all';
+let charts = {};
+
+// ── P&L calc ──
+function calcPnL(t) {
+  if (!t.exit || t.exit === '') return null;
+  const entry = parseFloat(t.entry), exit = parseFloat(t.exit);
+  const qty = parseFloat(t.qty), fee = parseFloat(t.fee) || 0;
+  const raw = t.dir === 'LONG' ? (exit - entry) * qty : (entry - exit) * qty;
+  return raw - fee;
+}
+
+// ── Stats ──
+function computeStats() {
+  const closed = trades.filter(t => t.exit && t.exit !== '');
+  const pnls = closed.map(t => calcPnL(t)).filter(v => v !== null);
+  const wins = pnls.filter(v => v > 0);
+  const losses = pnls.filter(v => v <= 0);
+  const totalPnL = pnls.reduce((a, b) => a + b, 0);
+  const winRate = closed.length ? (wins.length / closed.length * 100) : 0;
+  const open = trades.filter(t => !t.exit || t.exit === '');
+
+  // Avg R:R
+  const rrs = trades.filter(t => t.sl && t.tp && t.entry).map(t => {
+    const e = parseFloat(t.entry), sl = parseFloat(t.sl), tp = parseFloat(t.tp);
+    const risk = Math.abs(e - sl), reward = Math.abs(tp - e);
+    return risk > 0 ? reward / risk : null;
+  }).filter(v => v !== null);
+  const avgRR = rrs.length ? rrs.reduce((a,b) => a+b,0) / rrs.length : 0;
+
+  return { totalPnL, winRate, wins, losses, open, closed, pnls, avgRR };
+}
+
+function fmt(n) {
+  const abs = Math.abs(n);
+  const s = abs >= 1000 ? abs.toLocaleString('en-IN', {minimumFractionDigits:2,maximumFractionDigits:2}) : abs.toFixed(2);
+  return (n < 0 ? '-' : '+') + '$' + s;
+}
+
+// ── Update UI ──
+function refresh() {
+  const st = computeStats();
+
+  // Sidebar
+  document.getElementById('sidebar-pnl').textContent = (st.totalPnL >= 0 ? '+' : '') + '$' + Math.abs(st.totalPnL).toFixed(2);
+  document.getElementById('sidebar-pnl').style.color = st.totalPnL >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('sidebar-trades').textContent = trades.length;
+  document.getElementById('sidebar-wr').textContent = st.winRate.toFixed(1) + '%';
+
+  // Dashboard stats
+  const pnlEl = document.getElementById('stat-pnl');
+  pnlEl.textContent = (st.totalPnL >= 0 ? '+' : '') + '$' + Math.abs(st.totalPnL).toFixed(2);
+  pnlEl.className = 'stat-value ' + (st.totalPnL >= 0 ? 'green' : 'red');
+  document.getElementById('stat-wr').textContent = st.winRate.toFixed(1) + '%';
+  document.getElementById('stat-wr-sub').textContent = st.wins.length + 'W / ' + st.losses.length + 'L';
+  document.getElementById('stat-total').textContent = trades.length;
+  document.getElementById('stat-total-sub').textContent = st.open.length + ' open';
+  document.getElementById('stat-rr').textContent = '1:' + st.avgRR.toFixed(2);
+
+  // Analytics cards
+  const sortedPnl = [...st.pnls].map((v,i) => ({v, t: st.closed[i]}));
+  const best = sortedPnl.sort((a,b)=>b.v-a.v)[0];
+  const worst = sortedPnl.sort((a,b)=>a.v-b.v)[0];
+  sortedPnl.sort((a,b)=>b.v-a.v);
+  document.getElementById('an-best').textContent = best ? fmt(best.v) : '$0';
+  document.getElementById('an-best-coin').textContent = best ? best.t.coin + ' — ' + best.t.dir : '—';
+  document.getElementById('an-worst').textContent = worst ? fmt(worst.v) : '$0';
+  document.getElementById('an-worst-coin').textContent = worst ? worst.t.coin + ' — ' + worst.t.dir : '—';
+  const avgWin = st.wins.length ? st.wins.reduce((a,b)=>a+b,0)/st.wins.length : 0;
+  const avgLoss = st.losses.length ? st.losses.reduce((a,b)=>a+b,0)/st.losses.length : 0;
+  document.getElementById('an-avg-win').textContent = '$' + avgWin.toFixed(2);
+  document.getElementById('an-avg-loss').textContent = '$' + Math.abs(avgLoss).toFixed(2);
+
+  renderTables();
+  renderCharts(st);
+  renderJournal();
+  save();
+}
+
+// ── Tables ──
+function coinClass(coin) {
+  const c = coin.toUpperCase();
+  if (c.includes('BTC')) return 'c-btc';
+  if (c.includes('ETH')) return 'c-eth';
+  if (c.includes('SOL')) return 'c-sol';
+  if (c.includes('BNB')) return 'c-bnb';
+  if (c.includes('XRP')) return 'c-xrp';
+  if (c.includes('DOGE')) return 'c-doge';
+  return 'c-def';
+}
+
+function tradeRow(t) {
+  const pnl = calcPnL(t);
+  const pnlStr = pnl === null ? '<span style="color:var(--amber)">Open</span>' :
+    `<span class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${fmt(pnl)}</span>`;
+  const status = !t.exit || t.exit === '' ? '<span class="badge badge-open">Open</span>' : '<span class="badge badge-closed">Closed</span>';
+  const dir = t.dir === 'LONG' ? '<span class="badge badge-long">Long</span>' : '<span class="badge badge-short">Short</span>';
+  return `<tr>
+    <td><span class="coin-tag"><span class="coin-dot ${coinClass(t.coin)}" style="background:currentColor"></span><span class="${coinClass(t.coin)}">${t.coin}</span></span></td>
+    <td>${dir}</td>
+    <td>$${parseFloat(t.entry).toFixed(4)}</td>
+    <td>${t.exit ? '$'+parseFloat(t.exit).toFixed(4) : '—'}</td>
+    <td>${t.qty}</td>
+    <td>${pnlStr}</td>
+    <td>${status}</td>
+    <td style="color:var(--muted)">${t.date}</td>
+    <td style="color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.setup || '—'}</td>
+    <td>
+      <div class="actions-col">
+        <button class="btn btn-outline btn-sm" onclick="editTrade('${t.id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTrade('${t.id}')">Del</button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+function tableHTML(rows) {
+  if (!rows.length) return '<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">No trades yet</div><div>Add your first trade to get started</div></div>';
+  return `<table><thead><tr>
+    <th>Coin</th><th>Dir</th><th>Entry</th><th>Exit</th><th>Qty</th><th>P&L</th><th>Status</th><th>Date</th><th>Setup</th><th>Actions</th>
+  </tr></thead><tbody>${rows.map(tradeRow).join('')}</tbody></table>`;
+}
+
+function renderTables() {
+  // recent (last 5)
+  const recent = [...trades].sort((a,b) => new Date(b.date)-new Date(a.date)).slice(0,5);
+  document.getElementById('recent-table').innerHTML = tableHTML(recent);
+
+  // full log with filter
+  let filtered = [...trades].sort((a,b) => new Date(b.date)-new Date(a.date));
+  if (tradeFilter === 'LONG') filtered = filtered.filter(t => t.dir === 'LONG');
+  else if (tradeFilter === 'SHORT') filtered = filtered.filter(t => t.dir === 'SHORT');
+  else if (tradeFilter === 'open') filtered = filtered.filter(t => !t.exit || t.exit === '');
+  else if (tradeFilter === 'closed') filtered = filtered.filter(t => t.exit && t.exit !== '');
+  else if (tradeFilter === 'win') filtered = filtered.filter(t => { const p = calcPnL(t); return p !== null && p > 0; });
+  else if (tradeFilter === 'loss') filtered = filtered.filter(t => { const p = calcPnL(t); return p !== null && p <= 0; });
+  document.getElementById('trades-table').innerHTML = tableHTML(filtered);
+}
+
+// ── Charts ──
+const chartDefaults = {
+  color: '#64748b',
+  font: { family: "'JetBrains Mono', monospace", size: 11 }
+};
+Chart.defaults.color = chartDefaults.color;
+Chart.defaults.font = chartDefaults.font;
+
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function renderCharts(st) {
+  // Cumulative P&L line
+  destroyChart('pnl');
+  const closed = [...trades].filter(t => t.exit && t.exit !== '').sort((a,b) => new Date(a.date)-new Date(b.date));
+  let cumPnL = 0;
+  const pnlData = closed.map(t => { cumPnL += calcPnL(t); return cumPnL; });
+  const pnlLabels = closed.map(t => t.coin + ' ' + t.date);
+  const ctx1 = document.getElementById('pnl-chart').getContext('2d');
+  const grad = ctx1.createLinearGradient(0,0,0,200);
+  grad.addColorStop(0, 'rgba(0,212,170,0.25)');
+  grad.addColorStop(1, 'rgba(0,212,170,0.02)');
+  charts['pnl'] = new Chart(ctx1, {
+    type: 'line',
+    data: {
+      labels: pnlLabels.length ? pnlLabels : ['—'],
+      datasets: [{
+        data: pnlData.length ? pnlData : [0],
+        borderColor: '#00d4aa',
+        backgroundColor: grad,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: '#00d4aa',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '$' + ctx.raw.toFixed(2) } } },
+      scales: {
+        x: { display: false, grid: { color: '#1e2630' } },
+        y: { grid: { color: '#1e2630' }, ticks: { callback: v => '$'+v } }
+      }
+    }
+  });
+
+  // Win/Loss donut
+  destroyChart('donut');
+  charts['donut'] = new Chart(document.getElementById('donut-chart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Wins', 'Losses', 'Open'],
+      datasets: [{
+        data: [st.wins.length, st.losses.length, st.open.length],
+        backgroundColor: ['rgba(0,212,170,0.8)', 'rgba(255,77,106,0.8)', 'rgba(245,158,11,0.7)'],
+        borderColor: ['#00d4aa','#ff4d6a','#f59e0b'],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12 } } },
+      cutout: '65%'
+    }
+  });
+
+  // Coin P&L bar
+  destroyChart('coin');
+  const coinMap = {};
+  trades.forEach(t => {
+    const p = calcPnL(t);
+    if (p === null) return;
+    coinMap[t.coin] = (coinMap[t.coin] || 0) + p;
+  });
+  const coins = Object.keys(coinMap);
+  const coinVals = coins.map(c => coinMap[c]);
+  destroyChart('coin');
+  charts['coin'] = new Chart(document.getElementById('coin-chart'), {
+    type: 'bar',
+    data: {
+      labels: coins.length ? coins : ['—'],
+      datasets: [{
+        data: coinVals.length ? coinVals : [0],
+        backgroundColor: coinVals.map(v => v >= 0 ? 'rgba(0,212,170,0.7)' : 'rgba(255,77,106,0.7)'),
+        borderColor: coinVals.map(v => v >= 0 ? '#00d4aa' : '#ff4d6a'),
+        borderWidth: 1,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#1e2630' } },
+        y: { grid: { color: '#1e2630' }, ticks: { callback: v => '$'+v } }
+      }
+    }
+  });
+
+  // Size distribution
+  destroyChart('size');
+  const sizes = trades.map(t => parseFloat(t.entry) * parseFloat(t.qty)).filter(v => !isNaN(v));
+  const buckets = { '<$100': 0, '$100-500': 0, '$500-1k': 0, '$1k-5k': 0, '>$5k': 0 };
+  sizes.forEach(s => {
+    if (s < 100) buckets['<$100']++;
+    else if (s < 500) buckets['$100-500']++;
+    else if (s < 1000) buckets['$500-1k']++;
+    else if (s < 5000) buckets['$1k-5k']++;
+    else buckets['>$5k']++;
+  });
+  charts['size'] = new Chart(document.getElementById('size-chart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(buckets),
+      datasets: [{
+        data: Object.values(buckets),
+        backgroundColor: 'rgba(59,130,246,0.7)',
+        borderColor: '#3b82f6',
+        borderWidth: 1,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { color: '#1e2630' } }, y: { grid: { color: '#1e2630' } } }
+    }
+  });
+
+  // Monthly P&L
+  destroyChart('monthly');
+  const monthly = {};
+  trades.forEach(t => {
+    const p = calcPnL(t);
+    if (p === null) return;
+    const m = t.date.slice(0, 7);
+    monthly[m] = (monthly[m] || 0) + p;
+  });
+  const months = Object.keys(monthly).sort();
+  const mVals = months.map(m => monthly[m]);
+  charts['monthly'] = new Chart(document.getElementById('monthly-chart'), {
+    type: 'bar',
+    data: {
+      labels: months.length ? months : ['—'],
+      datasets: [{
+        data: mVals.length ? mVals : [0],
+        backgroundColor: mVals.map(v => v >= 0 ? 'rgba(0,212,170,0.7)' : 'rgba(255,77,106,0.7)'),
+        borderColor: mVals.map(v => v >= 0 ? '#00d4aa' : '#ff4d6a'),
+        borderWidth: 1,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#1e2630' } },
+        y: { grid: { color: '#1e2630' }, ticks: { callback: v => '$'+v } }
+      }
+    }
+  });
+}
+
+// ── Modal ──
+function openModal(id) {
+  editId = id || null;
+  const modal = document.getElementById('modal');
+  if (id) {
+    const t = trades.find(x => x.id === id);
+    document.getElementById('modal-title').textContent = '✏ Edit Trade';
+    document.getElementById('f-coin').value = t.coin;
+    document.getElementById('f-dir').value = t.dir;
+    document.getElementById('f-entry').value = t.entry;
+    document.getElementById('f-exit').value = t.exit || '';
+    document.getElementById('f-qty').value = t.qty;
+    document.getElementById('f-fee').value = t.fee || '';
+    document.getElementById('f-sl').value = t.sl || '';
+    document.getElementById('f-tp').value = t.tp || '';
+    document.getElementById('f-exchange').value = t.exchange || 'Binance';
+    document.getElementById('f-date').value = t.date;
+    document.getElementById('f-setup').value = t.setup || '';
+    document.getElementById('f-notes').value = t.notes || '';
+  } else {
+    document.getElementById('modal-title').textContent = '+ New Trade';
+    document.getElementById('f-coin').value = '';
+    document.getElementById('f-dir').value = 'LONG';
+    ['f-entry','f-exit','f-qty','f-fee','f-sl','f-tp','f-setup','f-notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('f-exchange').value = 'Binance';
+  }
+  updatePnLPreview();
+  modal.classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+function updatePnLPreview() {
+  const entry = parseFloat(document.getElementById('f-entry').value);
+  const exit = parseFloat(document.getElementById('f-exit').value);
+  const qty = parseFloat(document.getElementById('f-qty').value);
+  const fee = parseFloat(document.getElementById('f-fee').value) || 0;
+  const dir = document.getElementById('f-dir').value;
+  const el = document.getElementById('f-pnl-preview');
+  if (entry && exit && qty) {
+    const raw = dir === 'LONG' ? (exit - entry) * qty : (entry - exit) * qty;
+    const net = raw - fee;
+    const pct = ((net / (entry * qty)) * 100).toFixed(2);
+    el.style.display = 'block';
+    el.innerHTML = `P&L Preview: <span class="${net>=0?'pnl-pos':'pnl-neg'}">${fmt(net)}</span>&nbsp; <span style="color:var(--muted)">(${net>=0?'+':''}${pct}%)</span>`;
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+['f-entry','f-exit','f-qty','f-fee','f-dir'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updatePnLPreview);
+});
+
+function saveTrade() {
+  const coin = document.getElementById('f-coin').value.trim().toUpperCase();
+  const entry = document.getElementById('f-entry').value;
+  if (!coin || !entry) { alert('Coin and Entry price are required.'); return; }
+  const trade = {
+    id: editId || Date.now().toString(),
+    coin,
+    dir: document.getElementById('f-dir').value,
+    entry,
+    exit: document.getElementById('f-exit').value,
+    qty: document.getElementById('f-qty').value,
+    fee: document.getElementById('f-fee').value,
+    sl: document.getElementById('f-sl').value,
+    tp: document.getElementById('f-tp').value,
+    exchange: document.getElementById('f-exchange').value,
+    date: document.getElementById('f-date').value,
+    setup: document.getElementById('f-setup').value,
+    notes: document.getElementById('f-notes').value
+  };
+  if (editId) {
+    trades = trades.map(t => t.id === editId ? trade : t);
+  } else {
+    trades.push(trade);
+  }
+  closeModal();
+  refresh();
+}
+
+function editTrade(id) { openModal(id); }
+
+function deleteTrade(id) {
+  if (!confirm('Delete this trade?')) return;
+  trades = trades.filter(t => t.id !== id);
+  refresh();
+}
+
+// ── Filter ──
+function filterTrades(f, el) {
+  tradeFilter = f;
+  document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderTables();
+}
+
+// ── Journal ──
+function toggleEmotion(el) { el.classList.toggle('sel'); }
+
+function addJournalEntry() {
+  const date = document.getElementById('j-date').value;
+  const mood = document.getElementById('j-mood').value;
+  const market = document.getElementById('j-market').value;
+  const notes = document.getElementById('j-notes').value;
+  const emotions = [...document.querySelectorAll('.emotion-tag.sel')].map(e => e.textContent);
+  if (!notes) { alert('Please write some notes.'); return; }
+  journal.push({ id: Date.now().toString(), date: date || new Date().toISOString().slice(0,10), mood, market, notes, emotions });
+  document.getElementById('j-notes').value = '';
+  document.getElementById('j-market').value = '';
+  document.querySelectorAll('.emotion-tag').forEach(e => e.classList.remove('sel'));
+  refresh();
+}
+
+const moodEmoji = { confident:'😎', neutral:'😐', anxious:'😬', fomo:'🔥', revenge:'😤', calm:'🧘' };
+
+function renderJournal() {
+  const sorted = [...journal].sort((a,b) => new Date(b.date)-new Date(a.date));
+  const el = document.getElementById('journal-entries');
+  if (!sorted.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📝</div><div class="empty-title">No journal entries yet</div></div>'; return; }
+  el.innerHTML = sorted.map(j => `
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:22px">${moodEmoji[j.mood]||'📝'}</span>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;">${j.date}</div>
+            <div style="font-size:11px;color:var(--muted);text-transform:capitalize;">${j.mood}</div>
+          </div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="deleteJournal('${j.id}')">Del</button>
+      </div>
+      ${j.market ? `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">📈 ${j.market}</div>` : ''}
+      <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;margin-bottom:10px;">${j.notes}</div>
+      ${j.emotions.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;">${j.emotions.map(e=>`<span class="emotion-tag sel" style="cursor:default;pointer-events:none">${e}</span>`).join('')}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function deleteJournal(id) {
+  if (!confirm('Delete journal entry?')) return;
+  journal = journal.filter(j => j.id !== id);
+  refresh();
+}
+
+// ── CSV Import ──
+function handleCSV(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const lines = ev.target.result.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const imported = [];
+    for (let i = 1; i < lines.length; i++) {
+      const vals = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g,''));
+      const row = {};
+      headers.forEach((h, idx) => row[h] = vals[idx] || '');
+      imported.push({
+        id: Date.now().toString() + i,
+        coin: (row.coin || row.pair || row.symbol || '').toUpperCase(),
+        dir: (row.direction || row.side || row.type || 'LONG').toUpperCase(),
+        entry: row.entry || row['entry price'] || '0',
+        exit: row.exit || row['exit price'] || '',
+        qty: row.quantity || row.qty || row.amount || '1',
+        fee: row.fee || row.fees || '0',
+        sl: row['stop loss'] || row.sl || '',
+        tp: row['take profit'] || row.tp || '',
+        exchange: row.exchange || 'Imported',
+        date: row.date || new Date().toISOString().slice(0,10),
+        setup: row.setup || row.strategy || '',
+        notes: row.notes || row.note || ''
+      });
+    }
+    trades = [...trades, ...imported];
+    const prev = document.getElementById('csv-preview');
+    prev.innerHTML = `<span style="color:var(--green)">✓ Imported ${imported.length} trades successfully</span><br><br>
+      <table><thead><tr><th>Coin</th><th>Dir</th><th>Entry</th><th>Exit</th><th>Date</th></tr></thead>
+      <tbody>${imported.slice(0,10).map(t=>`<tr><td class="${coinClass(t.coin)}">${t.coin}</td><td>${t.dir}</td><td>$${t.entry}</td><td>${t.exit?'$'+t.exit:'Open'}</td><td>${t.date}</td></tr>`).join('')}</tbody></table>
+      ${imported.length>10?`<div style="margin-top:8px;color:var(--muted)">...and ${imported.length-10} more</div>`:''}`;
+    refresh();
+  };
+  reader.readAsText(file);
+}
+
+// ── Sample Data ──
+function loadSampleData() {
+  const samples = [
+    { id:'s1', coin:'BTC', dir:'LONG', entry:'42000', exit:'45500', qty:'0.1', fee:'8', sl:'41000', tp:'46000', exchange:'Binance', date:'2024-11-01', setup:'Support Bounce', notes:'Held weekly support, strong volume' },
+    { id:'s2', coin:'ETH', dir:'LONG', entry:'2800', exit:'3150', qty:'0.5', fee:'4', sl:'2700', tp:'3200', exchange:'Bybit', date:'2024-11-05', setup:'EMA Cross', notes:'Clean 21/50 EMA bullish cross' },
+    { id:'s3', coin:'SOL', dir:'LONG', entry:'95', exit:'88', qty:'5', fee:'2', sl:'90', tp:'110', exchange:'Coinbase', date:'2024-11-08', setup:'Breakout', notes:'Broke below support, stopped out' },
+    { id:'s4', coin:'BNB', dir:'SHORT', entry:'310', exit:'295', qty:'1', fee:'2', sl:'318', tp:'290', exchange:'Binance', date:'2024-11-12', setup:'Resistance Rejection', notes:'Double top at resistance' },
+    { id:'s5', coin:'BTC', dir:'LONG', entry:'46200', exit:'', qty:'0.08', fee:'6', sl:'45000', tp:'50000', exchange:'Binance', date:'2024-11-20', setup:'Trend Continuation', notes:'Still in trade, looking good' },
+    { id:'s6', coin:'ETH', dir:'SHORT', entry:'3050', exit:'2900', qty:'0.4', fee:'5', sl:'3150', tp:'2850', exchange:'Bybit', date:'2024-11-22', setup:'Overbought RSI', notes:'RSI >80, faded the move' },
+    { id:'s7', coin:'DOGE', dir:'LONG', entry:'0.085', exit:'0.11', qty:'2000', fee:'3', sl:'0.078', tp:'0.115', exchange:'Binance', date:'2024-11-25', setup:'Breakout', notes:'Meme pump, caught the run' },
+    { id:'s8', coin:'XRP', dir:'LONG', entry:'0.62', exit:'0.71', qty:'500', fee:'2', sl:'0.60', tp:'0.75', exchange:'Coinbase', date:'2024-12-01', setup:'Cup and Handle', notes:'Textbook pattern' },
+  ];
+  trades = [...trades, ...samples.filter(s => !trades.find(t=>t.id===s.id))];
+  document.getElementById('csv-preview').innerHTML = `<span style="color:var(--green)">✓ Loaded ${samples.length} sample trades</span>`;
+  refresh();
+}
+
+// ── Export CSV ──
+function exportCSV() {
+  const headers = ['date','coin','dir','entry','exit','qty','fee','sl','tp','exchange','setup','notes','pnl'];
+  const rows = trades.map(t => {
+    const p = calcPnL(t);
+    return [t.date,t.coin,t.dir,t.entry,t.exit||'',t.qty,t.fee||'',t.sl||'',t.tp||'',t.exchange||'',t.setup||'',t.notes||'',p!==null?p.toFixed(2):''].join(',');
+  });
+  const csv = [headers.join(','), ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'crypto-journal-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// ── Nav ──
+const pageTitles = { dashboard:'Dashboard', trades:'Trade Log', analytics:'Analytics', journal:'Notes & Feelings', import:'Import CSV' };
+function goPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('topbar-title').textContent = pageTitles[id];
+  if (id === 'analytics' || id === 'dashboard') { setTimeout(() => renderCharts(computeStats()), 50); }
+}
+
+// ── Persist ──
+function save() {
+  localStorage.setItem('cj_trades', JSON.stringify(trades));
+  localStorage.setItem('cj_journal', JSON.stringify(journal));
+}
+
+// ── Init ──
+document.getElementById('j-date').value = new Date().toISOString().slice(0,10);
+refresh();
+
+// Close modal on overlay click
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
