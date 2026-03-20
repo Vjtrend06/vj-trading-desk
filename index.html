@@ -337,7 +337,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
           <div class="price-item"><div class="price-dot" style="background:#e67e22"></div><div class="price-sym" style="color:#e67e22">GOLD</div><div class="price-val" id="p-gold">—</div><div class="price-chg" id="c-gold">—</div></div>
         </div>
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--s2);font-size:9px;color:var(--muted);text-align:center;">
-          Auto-refresh every 15s · CoinGecko API
+          <span id="price-api-label">Auto-refresh every 15s · Binance API</span>
         </div>
       </div>
     </div>
@@ -618,21 +618,29 @@ function setToday() {
 // ── DATA LOADING — Sheet only, no hardcoded fallback ─────
 async function loadData() {
   try {
-    const res = await fetch(SCRIPT_URL, {method:'GET'});
-    const data = await res.json();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(SCRIPT_URL + '?t=' + Date.now(), {
+      method:'GET',
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    const text = await res.text();
+    const data = JSON.parse(text);
     if (data.trades && data.trades.length > 0) {
       allTrades = data.trades;
       balance = parseFloat(data.balance) || 1970;
+      setSyncLive();
     } else {
       allTrades = [];
       balance = 1970;
+      setSyncLive();
     }
-    setSyncLive();
   } catch(e) {
+    console.log('Sheet load error:', e);
     allTrades = [];
     balance = 1970;
     setSyncError();
-    showToast('Sheet connection failed — check internet','error');
   }
 }
 
@@ -654,6 +662,7 @@ function promptUpdateBalance() {
   // Save to Sheet
   fetch(SCRIPT_URL, {
     method:'POST',
+    mode: 'no-cors',
     body: JSON.stringify({action:'updateBalance', balance: bal})
   }).then(() => {
     showToast('Balance updated to $'+bal.toFixed(2)+' ✓','success');
@@ -714,7 +723,9 @@ function renderStats() {
 
   const fmt = v => (v>=0?'+':'')+v.toFixed(2);
 
-  document.getElementById('s-balance').textContent = '$'+balance.toFixed(2);
+  // Auto balance = starting balance from Sheet + total PnL
+  const autoBalance = balance + totalPnl;
+  document.getElementById('s-balance').textContent = '$'+autoBalance.toFixed(2);
   setValColor('s-today', fmt(todayPnl), todayPnl);
   setValColor('s-total', fmt(totalPnl), totalPnl);
   document.getElementById('s-winrate').textContent = winRate+'%';
@@ -724,7 +735,7 @@ function renderStats() {
   document.getElementById('s-worst').textContent = days.length ? '-$'+Math.abs(worst).toFixed(0) : '—';
   document.getElementById('s-streak').textContent = streak ? streak+streakDir : '—';
   document.getElementById('s-streak').className = 'val '+(streakDir==='W'?'g':'r');
-  document.getElementById('top-balance').textContent = '$'+balance.toFixed(2);
+  document.getElementById('top-balance').textContent = '$'+(balance + totalPnl).toFixed(2);
 }
 
 function setValColor(id, text, val) {
@@ -860,9 +871,27 @@ function renderCalendar() {
 
   const byDay = {};
   allTrades.forEach(t => {
-    if (!byDay[t.date]) byDay[t.date] = {pnl:0, trades:0};
-    if (t.result !== 'Open') byDay[t.date].pnl += parseFloat(t.pnl||0);
-    byDay[t.date].trades++;
+    // Normalize date - Sheet may return dates in different formats
+    let d = t.date;
+    if (!d) return;
+    // Handle Date object or timestamp
+    if (typeof d === 'number') d = new Date(d).toISOString().split('T')[0];
+    else if (typeof d === 'string') {
+      // Handle formats like "2026-3-19" or "19/03/2026"
+      if (d.includes('/')) {
+        const parts = d.split('/');
+        d = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+      } else {
+        // Normalize "2026-3-19" to "2026-03-19"
+        const parts = d.split('-');
+        if (parts.length === 3) {
+          d = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+        }
+      }
+    }
+    if (!byDay[d]) byDay[d] = {pnl:0, trades:0};
+    if (t.result !== 'Open') byDay[d].pnl += parseFloat(t.pnl||0);
+    byDay[d].trades++;
   });
 
   const firstDay = new Date(calYear, calMonth, 1).getDay();
@@ -899,7 +928,19 @@ function selectDay(date) {
 }
 
 function renderDayDetail(date) {
-  const trades = allTrades.filter(t => t.date === date);
+  const trades = allTrades.filter(t => {
+    let d = t.date;
+    if (!d) return false;
+    if (typeof d === 'number') d = new Date(d).toISOString().split('T')[0];
+    else if (typeof d === 'string' && d.includes('/')) {
+      const parts = d.split('/');
+      d = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+    } else if (typeof d === 'string') {
+      const parts = d.split('-');
+      if (parts.length === 3) d = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+    }
+    return d === date;
+  });
   const wrap = document.getElementById('day-detail-wrap');
   if (!trades.length) { wrap.innerHTML = ''; return; }
 
@@ -1010,57 +1051,47 @@ function renderAnalytics() {
 
 // ── LIVE PRICES ────────────────────────────────────────────
 async function fetchPrices() {
-  const coins = [
-    {id:'bitcoin', sym:'BTC'},
-    {id:'ethereum', sym:'ETH'},
-    {id:'solana', sym:'SOL'},
-    {id:'tether-gold', sym:'XAU'}
+  // Use Binance directly - most reliable, no CORS issues
+  const pairs = [
+    {symbol:'BTCUSDT', elId:'btc', isBTC:true},
+    {symbol:'ETHUSDT', elId:'eth', isBTC:false},
+    {symbol:'SOLUSDT', elId:'sol', isBTC:false}
   ];
   try {
-    const ids = coins.map(c=>c.id).join(',');
-    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
-    const data = await res.json();
-    coins.forEach(({id, sym}) => {
-      const price = data[id]?.usd;
-      const chg = data[id]?.usd_24h_change;
-      if (!price) return;
+    const results = await Promise.all(
+      pairs.map(p => fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${p.symbol}`).then(r=>r.json()))
+    );
+    results.forEach((data, i) => {
+      const {elId, isBTC} = pairs[i];
+      const price = parseFloat(data.lastPrice);
+      const chg = parseFloat(data.priceChangePercent);
+      const sym = pairs[i].symbol.replace('USDT','');
       prices[sym] = price;
-      const priceEl = document.getElementById(`p-${sym.toLowerCase()}`);
-      const chgEl = document.getElementById(`c-${sym.toLowerCase()}`);
-      if (priceEl) priceEl.textContent = '$'+price.toLocaleString(undefined,{minimumFractionDigits:sym==='BTC'?0:2,maximumFractionDigits:sym==='BTC'?0:2});
+      const priceEl = document.getElementById(`p-${elId}`);
+      const chgEl = document.getElementById(`c-${elId}`);
+      if (priceEl) priceEl.textContent = '$'+price.toLocaleString(undefined,{minimumFractionDigits:isBTC?0:2,maximumFractionDigits:isBTC?0:2});
       if (chgEl) {
         chgEl.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%';
         chgEl.className = 'price-chg '+(chg>=0?'up':'dn');
       }
     });
-    document.getElementById('price-time').textContent = new Date().toLocaleTimeString();
-    setSyncLive();
+    // GOLD via separate API
+    try {
+      const goldRes = await fetch('https://api.metals.live/v1/spot/gold');
+      const goldData = await goldRes.json();
+      const goldPrice = goldData[0]?.price || goldData?.price;
+      if (goldPrice) {
+        const priceEl = document.getElementById('p-gold');
+        const chgEl = document.getElementById('c-gold');
+        if (priceEl) priceEl.textContent = '$'+parseFloat(goldPrice).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+        if (chgEl) { chgEl.textContent = '—'; chgEl.className = 'price-chg'; }
+      }
+    } catch(eg) {}
+    document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
+    document.getElementById('price-api-label').textContent = 'Auto-refresh every 15s · Binance API';
     renderOpenTrade();
   } catch(e) {
-    // Fallback to Binance
-    try {
-      const symbols = ['BTCUSDT','ETHUSDT','SOLUSDT'];
-      const res2 = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${JSON.stringify(symbols)}`);
-      const data2 = await res2.json();
-      data2.forEach(item => {
-        const price = parseFloat(item.lastPrice);
-        const chg = parseFloat(item.priceChangePercent);
-        const sym = item.symbol.replace('USDT','');
-        prices[sym] = price;
-        const priceEl = document.getElementById(`p-${sym.toLowerCase()}`);
-        const chgEl = document.getElementById(`c-${sym.toLowerCase()}`);
-        if (priceEl) priceEl.textContent = '$'+price.toLocaleString(undefined,{minimumFractionDigits:sym==='BTC'?0:2,maximumFractionDigits:sym==='BTC'?0:2});
-        if (chgEl) {
-          chgEl.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%';
-          chgEl.className = 'price-chg '+(chg>=0?'up':'dn');
-        }
-      });
-      document.getElementById('price-time').textContent = new Date().toLocaleTimeString();
-      setSyncLive();
-      renderOpenTrade();
-    } catch(e2) {
-      setSyncError();
-    }
+    console.log('Price fetch failed:', e);
   }
 }
 
@@ -1194,6 +1225,7 @@ async function saveTrade() {
     showSyncing();
     await fetch(SCRIPT_URL, {
       method:'POST',
+      mode: 'no-cors',
       body: JSON.stringify({action:'addTrade', trade})
     });
     setSyncLive();
