@@ -856,9 +856,7 @@ function renderStats() {
 
   const fmt = v => (v>=0?'+':'')+v.toFixed(2);
 
-  // Auto balance = starting balance from Sheet + total PnL
-  const autoBalance = balance + totalPnl;
-  document.getElementById('s-balance').textContent = '$'+autoBalance.toFixed(2);
+  document.getElementById('s-balance').textContent = '$'+balance.toFixed(2);
   setValColor('s-today', fmt(todayPnl), todayPnl);
   setValColor('s-total', fmt(totalPnl), totalPnl);
   document.getElementById('s-winrate').textContent = winRate+'%';
@@ -868,7 +866,7 @@ function renderStats() {
   document.getElementById('s-worst').textContent = days.length ? '-$'+Math.abs(worst).toFixed(0) : '—';
   document.getElementById('s-streak').textContent = streak ? streak+streakDir : '—';
   document.getElementById('s-streak').className = 'val '+(streakDir==='W'?'g':'r');
-  document.getElementById('top-balance').textContent = '$'+(balance + totalPnl).toFixed(2);
+  document.getElementById('top-balance').textContent = '$'+balance.toFixed(2);
 }
 
 function setValColor(id, text, val) {
@@ -1258,10 +1256,10 @@ function loadTVChart(symbol, exchange) {
   document.getElementById('tv-widget').appendChild(script);
 }
 
-function changeChart(symbol, btn) {
+function changeChart(symbol, btn, exchange) {
   document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  loadTVChart(symbol);
+  if(btn) btn.classList.add('active');
+  loadTVChart(symbol, exchange);
 }
 
 // ── MODAL ─────────────────────────────────────────────────
