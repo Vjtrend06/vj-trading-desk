@@ -595,16 +595,7 @@ let selectedDay = null;
 let prices = {};
 let currentSymbol = 'ETHUSDT';
 
-// ── SEED DATA (Mar 19 & 20 trades) ────────────────────────
-const SEED_TRADES = [
-  {id:'T001',date:'2026-03-19',time:'14:21',pair:'ETH/USDT',direction:'Long',entry:2162,exit:2174.49,sl:2178,tp:2145,leverage:10,pnl:-43.81,type:'Coach',result:'Loss',notes:'Entered at demand zone — wrong direction. 10x leverage. SL removed manually. Closed at 2174.49.'},
-  {id:'T002',date:'2026-03-19',time:'14:21',pair:'BTC/USDT',direction:'Short',entry:70050,exit:70311.46,sl:70300,tp:69700,leverage:20,pnl:-32.58,type:'Coach',result:'Loss',notes:'BTC short. 20x leverage. SL triggered at 70,311.46. High leverage caused big loss.'},
-  {id:'T003',date:'2026-03-19',time:'14:55',pair:'ETH/USDT',direction:'Short',entry:2174,exit:2182.24,sl:0,tp:2155,leverage:8,pnl:-79.04,type:'Coach',result:'Loss',notes:'Re-entry after stop hunt. No SL set. 2160 double bottom was forming — should have gone LONG not short. Biggest loss.'},
-  {id:'T004',date:'2026-03-19',time:'15:14',pair:'ETH/USDT',direction:'Long',entry:2184.33,exit:2159.65,sl:2155.66,tp:2200,leverage:8,pnl:2.66,type:'Coach',result:'Win',notes:'Late entry — bounce from 2160 already happened (24pts late). 8x leverage. Closed at 2159.65 with small profit +2.66.'},
-  {id:'T005',date:'2026-03-20',time:'09:48',pair:'ETH/USDT',direction:'Short',entry:2153,exit:2144,sl:2172,tp:2128,leverage:8,pnl:40,type:'Coach',result:'Win',notes:'Perfect setup. Supply zone rejection. 8x leverage with SL. Heatmap confirmed 2100 target. First clean winning trade.'},
-  {id:'T006',date:'2026-03-19',time:'16:21',pair:'SOL/USDT',direction:'Long',entry:89.86,exit:89.8594,sl:0,tp:0,leverage:8,pnl:-0.27,type:'Coach',result:'Loss',notes:'SOL long. Closed manually at 89.8594. Small loss -0.27.'},
-  {id:'T007',date:'2026-03-20',time:'19:30',pair:'HYPE/USDT',direction:'Long',entry:40.325,exit:38.941,sl:38.941,tp:0,leverage:5,pnl:-82.80,type:'Solo',result:'Loss',notes:'HYPE long. SL triggered at 38.941. 5x leverage. Outside normal ETH/BTC pairs.'},
-];
+// ── NO HARDCODED DATA — Sheet is single source of truth ──
 
 // ── INIT ──────────────────────────────────────────────────
 window.onload = async () => {
@@ -624,7 +615,7 @@ function setToday() {
   document.getElementById('f-time').value = now.toTimeString().slice(0,5);
 }
 
-// ── DATA LOADING ──────────────────────────────────────────
+// ── DATA LOADING — Sheet only, no hardcoded fallback ─────
 async function loadData() {
   try {
     const res = await fetch(SCRIPT_URL, {method:'GET'});
@@ -633,33 +624,19 @@ async function loadData() {
       allTrades = data.trades;
       balance = data.balance || 2018;
     } else {
-      allTrades = SEED_TRADES;
+      allTrades = [];
       balance = 2018;
-      await saveAllSeedData();
     }
     setSyncLive();
   } catch(e) {
-    allTrades = SEED_TRADES;
+    allTrades = [];
     balance = 2018;
     setSyncError();
+    showToast('Sheet connection failed — check internet','error');
   }
 }
 
-async function saveAllSeedData() {
-  for (const t of SEED_TRADES) {
-    try {
-      await fetch(SCRIPT_URL, {
-        method:'POST',
-        body: JSON.stringify({action:'addTrade', trade:{
-          date:t.date, time:t.time, pair:t.pair,
-          direction:t.direction, entry:t.entry, exit:t.exit,
-          sl:t.sl, tp:t.tp, leverage:t.leverage, pnl:t.pnl,
-          type:t.type, result:t.result, notes:t.notes
-        }})
-      });
-    } catch(e) {}
-  }
-}
+
 
 // ── SYNC STATUS ────────────────────────────────────────────
 function showSyncing() {
