@@ -257,8 +257,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
       <div class="sync-dot" id="sync-dot"></div>
       <span class="sync-label" id="sync-label">Connecting...</span>
     </div>
-    <div class="bal-display">
-      <div class="lbl">Balance</div>
+    <div class="bal-display" title="Click to update balance" style="cursor:pointer;" onclick="promptUpdateBalance()">
+      <div class="lbl">Balance ✏️</div>
       <div class="val" id="top-balance">Loading...</div>
     </div>
     <button class="add-btn" onclick="openModal()">+ Add Trade</button>
@@ -337,7 +337,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
           <div class="price-item"><div class="price-dot" style="background:#e67e22"></div><div class="price-sym" style="color:#e67e22">GOLD</div><div class="price-val" id="p-gold">—</div><div class="price-chg" id="c-gold">—</div></div>
         </div>
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--s2);font-size:9px;color:var(--muted);text-align:center;">
-          Auto-refresh every 15s · Binance API
+          Auto-refresh every 15s · CoinGecko API
         </div>
       </div>
     </div>
@@ -588,7 +588,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4xvjR0TnMMwkYzxV6gqY4fbJAdTgRMPrWOhrAnm5g7YVbzsbpQP69OkyxeQuOhVaP/exec';
 
 let allTrades = [];
-let balance = 2018;
+let balance = 1970;
 let currentFilter = 'all';
 let calYear = 2026, calMonth = 2; // 0-indexed, March = 2
 let selectedDay = null;
@@ -622,15 +622,15 @@ async function loadData() {
     const data = await res.json();
     if (data.trades && data.trades.length > 0) {
       allTrades = data.trades;
-      balance = data.balance || 2018;
+      balance = parseFloat(data.balance) || 1970;
     } else {
       allTrades = [];
-      balance = 2018;
+      balance = 1970;
     }
     setSyncLive();
   } catch(e) {
     allTrades = [];
-    balance = 2018;
+    balance = 1970;
     setSyncError();
     showToast('Sheet connection failed — check internet','error');
   }
@@ -643,8 +643,28 @@ function showSyncing() {
   document.getElementById('sync-dot').className='sync-dot saving';
   document.getElementById('sync-label').textContent='Syncing...';
 }
+function promptUpdateBalance() {
+  const current = document.getElementById('top-balance').textContent.replace('$','').replace(',','');
+  const newBal = prompt('Enter your current account balance (USDT):', current);
+  if (!newBal || isNaN(parseFloat(newBal))) return;
+  const bal = parseFloat(newBal);
+  balance = bal;
+  document.getElementById('top-balance').textContent = '$'+bal.toFixed(2);
+  document.getElementById('s-balance').textContent = '$'+bal.toFixed(2);
+  // Save to Sheet
+  fetch(SCRIPT_URL, {
+    method:'POST',
+    body: JSON.stringify({action:'updateBalance', balance: bal})
+  }).then(() => {
+    showToast('Balance updated to $'+bal.toFixed(2)+' ✓','success');
+  }).catch(() => {
+    showToast('Balance saved locally only','error');
+  });
+}
+
 function setSyncLive() {
   document.getElementById('sync-dot').className='sync-dot live';
+  document.getElementById('sync-label').textContent='Live';
   document.getElementById('sync-label').textContent='Live';
 }
 function setSyncError() {
@@ -694,7 +714,7 @@ function renderStats() {
 
   const fmt = v => (v>=0?'+':'')+v.toFixed(2);
 
-  document.getElementById('s-balance').textContent = '$'+balance.toLocaleString();
+  document.getElementById('s-balance').textContent = '$'+balance.toFixed(2);
   setValColor('s-today', fmt(todayPnl), todayPnl);
   setValColor('s-total', fmt(totalPnl), totalPnl);
   document.getElementById('s-winrate').textContent = winRate+'%';
@@ -704,7 +724,7 @@ function renderStats() {
   document.getElementById('s-worst').textContent = days.length ? '-$'+Math.abs(worst).toFixed(0) : '—';
   document.getElementById('s-streak').textContent = streak ? streak+streakDir : '—';
   document.getElementById('s-streak').className = 'val '+(streakDir==='W'?'g':'r');
-  document.getElementById('top-balance').textContent = '$'+balance.toLocaleString();
+  document.getElementById('top-balance').textContent = '$'+balance.toFixed(2);
 }
 
 function setValColor(id, text, val) {
@@ -990,14 +1010,20 @@ function renderAnalytics() {
 
 // ── LIVE PRICES ────────────────────────────────────────────
 async function fetchPrices() {
-  const symbols = ['BTCUSDT','ETHUSDT','SOLUSDT','XAUUSDT'];
+  const coins = [
+    {id:'bitcoin', sym:'BTC'},
+    {id:'ethereum', sym:'ETH'},
+    {id:'solana', sym:'SOL'},
+    {id:'tether-gold', sym:'XAU'}
+  ];
   try {
-    const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${JSON.stringify(symbols)}`);
+    const ids = coins.map(c=>c.id).join(',');
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
     const data = await res.json();
-    data.forEach(item => {
-      const price = parseFloat(item.lastPrice);
-      const chg = parseFloat(item.priceChangePercent);
-      const sym = item.symbol.replace('USDT','');
+    coins.forEach(({id, sym}) => {
+      const price = data[id]?.usd;
+      const chg = data[id]?.usd_24h_change;
+      if (!price) return;
       prices[sym] = price;
       const priceEl = document.getElementById(`p-${sym.toLowerCase()}`);
       const chgEl = document.getElementById(`c-${sym.toLowerCase()}`);
@@ -1011,7 +1037,30 @@ async function fetchPrices() {
     setSyncLive();
     renderOpenTrade();
   } catch(e) {
-    setSyncError();
+    // Fallback to Binance
+    try {
+      const symbols = ['BTCUSDT','ETHUSDT','SOLUSDT'];
+      const res2 = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${JSON.stringify(symbols)}`);
+      const data2 = await res2.json();
+      data2.forEach(item => {
+        const price = parseFloat(item.lastPrice);
+        const chg = parseFloat(item.priceChangePercent);
+        const sym = item.symbol.replace('USDT','');
+        prices[sym] = price;
+        const priceEl = document.getElementById(`p-${sym.toLowerCase()}`);
+        const chgEl = document.getElementById(`c-${sym.toLowerCase()}`);
+        if (priceEl) priceEl.textContent = '$'+price.toLocaleString(undefined,{minimumFractionDigits:sym==='BTC'?0:2,maximumFractionDigits:sym==='BTC'?0:2});
+        if (chgEl) {
+          chgEl.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%';
+          chgEl.className = 'price-chg '+(chg>=0?'up':'dn');
+        }
+      });
+      document.getElementById('price-time').textContent = new Date().toLocaleTimeString();
+      setSyncLive();
+      renderOpenTrade();
+    } catch(e2) {
+      setSyncError();
+    }
   }
 }
 
