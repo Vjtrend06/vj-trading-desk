@@ -30,9 +30,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
 
 /* TOPBAR */
 #topbar{background:var(--s1);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;height:50px;flex-shrink:0;gap:0;}
-.logo{font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:-1px;margin-right:28px;white-space:nowrap;}
-.logo span{color:var(--yellow);}
-.logo small{font-size:10px;color:var(--muted);font-family:var(--font);font-weight:400;letter-spacing:1px;margin-left:6px;}
+.logo{display:flex;align-items:center;gap:10px;margin-right:28px;white-space:nowrap;cursor:default;text-decoration:none;}
+.logo-icon{width:32px;height:32px;flex-shrink:0;}
+.logo-text{display:flex;flex-direction:column;line-height:1;}
+.logo-title{font-family:var(--display);font-size:16px;font-weight:800;letter-spacing:-0.5px;color:var(--text);}
+.logo-title span{color:var(--yellow);}
+.logo-sub{font-size:8px;color:var(--muted);font-family:var(--font);letter-spacing:2px;text-transform:uppercase;margin-top:1px;}
 .nav{display:flex;height:100%;gap:0;}
 .nb{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-family:var(--font);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;padding:0 14px;cursor:pointer;height:100%;transition:all .15s;white-space:nowrap;}
 .nb:hover{color:var(--text);}
@@ -249,7 +252,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
 
 <!-- TOPBAR -->
 <div id="topbar">
-  <div class="logo">VJ <span>DESK</span> <small>Trading Journal</small></div>
+  <div class="logo">
+    <svg class="logo-icon" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="42" height="42" rx="10" fill="#ffd060"/>
+      <text x="21" y="28" text-anchor="middle" font-family="Georgia,serif" font-size="20" font-weight="700" fill="#0a0a0f">VJ</text>
+    </svg>
+    <div class="logo-text">
+      <div class="logo-title">DESK<span></span></div>
+      <div class="logo-sub">Trading Journal</div>
+    </div>
+  </div>
   <div class="nav">
     <button class="nb active" onclick="showPanel('dashboard',this)">Dashboard</button>
     <button class="nb" onclick="showPanel('trades',this)">Trade Log</button>
@@ -417,7 +429,25 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
 <!-- CHARTS -->
 <div id="panel-charts" class="panel">
   <div style="margin-bottom:10px;">
-    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🔔 Price Alert</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">🔔 Price Alert</div>
+      <button onclick="toggleTelegramSetup()" style="background:none;border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:10px;color:var(--muted);cursor:pointer;font-family:var(--font);">⚡ Telegram Setup</button>
+    </div>
+    <div id="telegram-setup" style="display:none;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;">
+      <div style="color:var(--yellow);font-weight:700;margin-bottom:6px;">Telegram Bot Setup</div>
+      <div style="color:var(--muted);margin-bottom:8px;line-height:1.6;">
+        1. Open Telegram → search <b style="color:var(--text)">@BotFather</b><br>
+        2. Send <b style="color:var(--text)">/newbot</b> → follow steps → copy Bot Token<br>
+        3. Search <b style="color:var(--text)">@userinfobot</b> → send any msg → copy your Chat ID
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <input id="tg-token" type="password" placeholder="Bot Token (e.g. 7123456:AAF...)" style="flex:2;background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:11px;color:var(--text);font-family:var(--font);min-width:180px;">
+        <input id="tg-chatid" type="text" placeholder="Chat ID (e.g. 123456789)" style="flex:1;background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:11px;color:var(--text);font-family:var(--font);min-width:120px;">
+        <button onclick="saveTelegramConfig()" style="background:var(--blue);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">Save</button>
+        <button onclick="testTelegram()" style="background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:11px;color:var(--text);cursor:pointer;font-family:var(--font);">Test</button>
+      </div>
+      <div id="tg-status" style="margin-top:6px;font-size:10px;color:var(--green);display:none;"></div>
+    </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <select id="alert-symbol" style="background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--text);font-family:var(--font);cursor:pointer;">
         <option value="BINANCE:ETHUSDT">ETH/USDT</option>
@@ -730,14 +760,14 @@ window.onload = async () => {
   showSyncing();
   await loadData();
   fetchPrices();
-  setInterval(fetchPrices, 15000);
+  setInterval(fetchPrices, 8000);
   initTheme();
   renderAlerts();
   // Request notification permission on load
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
   }
-  setInterval(updateOpenTradePnl, 10000);
+  setInterval(updateOpenTradePnl, 3000);
   renderAll();
   loadTVChart('ETHUSDT');
 };
@@ -1206,18 +1236,29 @@ async function fetchPrices() {
         chgEl.className = 'price-chg '+(chg>=0?'up':'dn');
       }
     });
-    // GOLD via separate API
+    // GOLD via multiple fallback APIs
     try {
-      const goldRes = await fetch('https://api.metals.live/v1/spot/gold');
+      // Try gold-api.com first
+      const goldRes = await fetch('https://api.gold-api.com/price/XAU');
       const goldData = await goldRes.json();
-      const goldPrice = goldData[0]?.price || goldData?.price;
+      const goldPrice = goldData?.price || goldData?.regularMarketPrice;
       if (goldPrice) {
         const priceEl = document.getElementById('p-gold');
         const chgEl = document.getElementById('c-gold');
         if (priceEl) priceEl.textContent = '$'+parseFloat(goldPrice).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-        if (chgEl) { chgEl.textContent = '—'; chgEl.className = 'price-chg'; }
+        if (chgEl) { 
+          const chgPct = goldData?.chp || goldData?.ch || 0;
+          chgEl.textContent = (chgPct>=0?'+':'')+parseFloat(chgPct).toFixed(2)+'%';
+          chgEl.className = 'price-chg '+(chgPct>=0?'up':'dn');
+        }
       }
-    } catch(eg) {}
+    } catch(eg) {
+      // Fallback: show static label
+      const priceEl = document.getElementById('p-gold');
+      if (priceEl && priceEl.textContent === '—') {
+        priceEl.textContent = 'N/A';
+      }
+    }
     document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
     document.getElementById('price-api-label').textContent = 'Auto-refresh every 15s · Binance API';
     renderOpenTrade();
@@ -1508,37 +1549,121 @@ async function checkAlerts() {
 }
 
 function triggerAlert(alert, currentPrice) {
-  const msg = `🔔 ALERT: ${alert.symbolName.split(' ')[0]} is ${alert.condition} $${alert.price}! Current: $${currentPrice.toFixed(2)}`;
+  const sym = alert.symbolName.split(' ')[0];
+  const msg = `🔔 ${sym} ${alert.condition.toUpperCase()} $${alert.price} — Now: $${currentPrice.toFixed(2)}`;
 
-  // Browser notification
+  // 1. Browser notification
   if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification('VJ Trading Desk Alert', {
-      body: msg,
-      icon: '🔔'
-    });
+    new Notification(`⚡ VJ DESK ALERT`, { body: msg });
   }
 
-  // Sound alert
+  // 2. Screen flash overlay
+  const flash = document.createElement('div');
+  flash.style.cssText = 'position:fixed;inset:0;background:rgba(255,208,96,0.18);z-index:9999;pointer-events:none;transition:opacity 0.4s;';
+  document.body.appendChild(flash);
+  setTimeout(() => { flash.style.opacity = '0'; setTimeout(() => flash.remove(), 400); }, 300);
+
+  // 3. Strong but clean alert sound (3 beeps)
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-    oscillator.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.5);
+    const beep = (freq, start, dur) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.4, start + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+      osc.start(start); osc.stop(start + dur);
+    };
+    beep(880, ctx.currentTime, 0.15);
+    beep(1100, ctx.currentTime + 0.2, 0.15);
+    beep(880, ctx.currentTime + 0.4, 0.25);
   } catch(e) {}
+
+  // 4. Persistent alert banner (stays until dismissed)
+  showAlertBanner(sym, alert.condition, alert.price, currentPrice);
+
+  // 5. Telegram notification
+  sendTelegramAlert(msg);
 
   showToast(msg, 'success');
 }
 
+function showAlertBanner(sym, condition, targetPrice, currentPrice) {
+  const existing = document.getElementById('alert-banner');
+  if (existing) existing.remove();
+  const banner = document.createElement('div');
+  banner.id = 'alert-banner';
+  banner.style.cssText = 'position:fixed;top:56px;left:50%;transform:translateX(-50%);background:#ffd060;color:#0a0a0f;padding:10px 20px;border-radius:8px;font-family:monospace;font-size:13px;font-weight:700;z-index:9998;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
+  banner.innerHTML = `⚡ ${sym} ${condition.toUpperCase()} $${targetPrice} — $${currentPrice.toFixed(2)} <button onclick="this.parentElement.remove()" style="background:rgba(0,0,0,0.15);border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px;font-weight:700;">✕</button>`;
+  document.body.appendChild(banner);
+  // Auto remove after 30s
+  setTimeout(() => { if (document.getElementById('alert-banner')) banner.remove(); }, 30000);
+}
+
+// Telegram functions
+function toggleTelegramSetup() {
+  const el = document.getElementById('telegram-setup');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  // Load saved values
+  const cfg = JSON.parse(localStorage.getItem('vj_telegram') || '{}');
+  if (cfg.token) document.getElementById('tg-token').value = cfg.token;
+  if (cfg.chatid) document.getElementById('tg-chatid').value = cfg.chatid;
+}
+
+function saveTelegramConfig() {
+  const token = document.getElementById('tg-token').value.trim();
+  const chatid = document.getElementById('tg-chatid').value.trim();
+  if (!token || !chatid) { showToast('Enter both Token and Chat ID','error'); return; }
+  localStorage.setItem('vj_telegram', JSON.stringify({token, chatid}));
+  const st = document.getElementById('tg-status');
+  st.style.display = 'block';
+  st.textContent = '✓ Saved! Click Test to verify.';
+  showToast('Telegram config saved ✓','success');
+}
+
+async function testTelegram() {
+  const cfg = JSON.parse(localStorage.getItem('vj_telegram') || '{}');
+  if (!cfg.token || !cfg.chatid) { showToast('Save config first','error'); return; }
+  const ok = await sendTelegramMsg(cfg.token, cfg.chatid, '✅ VJ Desk Alert Test — Telegram connected successfully!');
+  const st = document.getElementById('tg-status');
+  st.style.display = 'block';
+  if (ok) {
+    st.style.color = 'var(--green)';
+    st.textContent = '✓ Test message sent! Check your Telegram.';
+    showToast('Telegram test sent ✓','success');
+  } else {
+    st.style.color = 'var(--red)';
+    st.textContent = '✗ Failed. Check your Token and Chat ID.';
+    showToast('Telegram test failed','error');
+  }
+}
+
+async function sendTelegramAlert(msg) {
+  const cfg = JSON.parse(localStorage.getItem('vj_telegram') || '{}');
+  if (!cfg.token || !cfg.chatid) return;
+  await sendTelegramMsg(cfg.token, cfg.chatid, `🔔 VJ DESK ALERT
+${msg}
+
+⏰ ${new Date().toLocaleTimeString('en-IN')}`);
+}
+
+async function sendTelegramMsg(token, chatid, text) {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({chat_id: chatid, text, parse_mode: 'HTML'})
+    });
+    const data = await res.json();
+    return data.ok;
+  } catch(e) { return false; }
+}
+
 // Check alerts every 10 seconds
-setInterval(checkAlerts, 10000);
+setInterval(checkAlerts, 5000);
 
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
