@@ -409,11 +409,131 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
 
 <!-- CHARTS -->
 <div id="panel-charts" class="panel">
-  <div class="chart-tabs">
-    <button class="ctab active" onclick="changeChart('ETHUSDT',this)">ETH/USDT</button>
-    <button class="ctab" onclick="changeChart('BTCUSDT',this)">BTC/USDT</button>
-    <button class="ctab" onclick="changeChart('SOLUSDT',this)">SOL/USDT</button>
-    <button class="ctab" onclick="changeChart('XAUUSDT',this)">GOLD/USDT</button>
+  <div style="margin-bottom:10px;">
+    <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🔔 Price Alert</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <select id="alert-symbol" style="background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--text);font-family:var(--font);cursor:pointer;">
+        <option value="BINANCE:ETHUSDT">ETH/USDT</option>
+        <option value="BINANCE:BTCUSDT">BTC/USDT</option>
+        <option value="BINANCE:SOLUSDT">SOL/USDT</option>
+        <option value="BINANCE:BNBUSDT">BNB/USDT</option>
+        <option value="BINANCE:XRPUSDT">XRP/USDT</option>
+        <option value="BINANCE:ADAUSDT">ADA/USDT</option>
+        <option value="BINANCE:DOGEUSDT">DOGE/USDT</option>
+        <option value="BINANCE:AVAXUSDT">AVAX/USDT</option>
+        <option value="BINANCE:DOTUSDT">DOT/USDT</option>
+        <option value="BINANCE:LINKUSDT">LINK/USDT</option>
+        <option value="BINANCE:MATICUSDT">MATIC/USDT</option>
+        <option value="BINANCE:UNIUSDT">UNI/USDT</option>
+        <option value="BINANCE:LTCUSDT">LTC/USDT</option>
+        <option value="BINANCE:ATOMUSDT">ATOM/USDT</option>
+        <option value="BINANCE:NEARUSDT">NEAR/USDT</option>
+        <option value="BINANCE:OPUSDT">OP/USDT</option>
+        <option value="BINANCE:ARBUSDT">ARB/USDT</option>
+        <option value="BINANCE:SUIUSDT">SUI/USDT</option>
+        <option value="BINANCE:APTUSDT">APT/USDT</option>
+        <option value="BINANCE:INJUSDT">INJ/USDT</option>
+        <option value="BINANCE:SEIUSDT">SEI/USDT</option>
+        <option value="BINANCE:TIAUSDT">TIA/USDT</option>
+        <option value="BINANCE:WIFUSDT">WIF/USDT</option>
+        <option value="BINANCE:FETUSDT">FET/USDT</option>
+        <option value="BINANCE:RENDERUSDT">RENDER/USDT</option>
+        <option value="BINANCE:ONDOUSDT">ONDO/USDT</option>
+        <option value="BINANCE:STXUSDT">STX/USDT</option>
+        <option value="BINANCE:JUPUSDT">JUP/USDT</option>
+        <option value="BINANCE:PYTHUSDT">PYTH/USDT</option>
+        <option value="BINANCE:WUSDT">W/USDT</option>
+        <option value="BINANCE:ENAUSDT">ENA/USDT</option>
+        <option value="BINANCE:EIGENUSDT">EIGEN/USDT</option>
+        <option value="BINANCE:TAOUSDT">TAO/USDT</option>
+        <option value="BINANCE:FTMUSDT">FTM/USDT</option>
+        <option value="BINANCE:PENDLEUSDT">PENDLE/USDT</option>
+        <option value="BINANCE:MKRUSDT">MKR/USDT</option>
+        <option value="BINANCE:AAVEUSDT">AAVE/USDT</option>
+        <option value="BINANCE:RUNEUSDT">RUNE/USDT</option>
+        <option value="BINANCE:SUSHIUSDT">SUSHI/USDT</option>
+        <option value="BINANCE:CRVUSDT">CRV/USDT</option>
+        <option value="BINANCE:SANDUSDT">SAND/USDT</option>
+        <option value="BINANCE:MANAUSDT">MANA/USDT</option>
+        <option value="BINANCE:AXSUSDT">AXS/USDT</option>
+        <option value="BINANCE:GALAUSDT">GALA/USDT</option>
+        <option value="BINANCE:IMXUSDT">IMX/USDT</option>
+        <option value="BINANCE:XTZUSDT">XTZ/USDT</option>
+        <option value="BINANCE:ALGOUSDT">ALGO/USDT</option>
+        <option value="BINANCE:XLMUSDT">XLM/USDT</option>
+        <option value="BINANCE:ICPUSDT">ICP/USDT</option>
+        <option value="BINANCE:FILUSDT">FIL/USDT</option>
+        <option value="BINANCE:HBARUSDT">HBAR/USDT</option>
+        <option value="BINANCE:VETUSDT">VET/USDT</option>
+        <option value="BINANCE:EGLDUSDT">EGLD/USDT</option>
+        <option value="BINANCE:FLOWUSDT">FLOW/USDT</option>
+        <option value="BINANCE:XMRUSDT">XMR/USDT</option>
+        <option value="BINANCE:EOSUSDT">EOS/USDT</option>
+        <option value="BINANCE:TRXUSDT">TRX/USDT</option>
+        <option value="BINANCE:TONUSDT">TON/USDT</option>
+        <option value="BINANCE:NOTUSDT">NOT/USDT</option>
+        <option value="BINANCE:PEPEUSDT">PEPE/USDT</option>
+        <option value="BINANCE:FLOKIUSDT">FLOKI/USDT</option>
+        <option value="BINANCE:BONKUSDT">BONK/USDT</option>
+        <option value="BINANCE:SHIBUSDT">SHIB/USDT</option>
+        <option value="BINANCE:1000SHIBUSDT">1000SHIB/USDT</option>
+        <option value="BINANCE:WLDUSDT">WLD/USDT</option>
+        <option value="BINANCE:GRTUSDT">GRT/USDT</option>
+        <option value="BINANCE:LRCUSDT">LRC/USDT</option>
+        <option value="BINANCE:KAVAUSDT">KAVA/USDT</option>
+        <option value="BINANCE:ZECUSDT">ZEC/USDT</option>
+        <option value="BINANCE:DASHUSDT">DASH/USDT</option>
+        <option value="BINANCE:BATUSDT">BAT/USDT</option>
+        <option value="BINANCE:COMPUSDT">COMP/USDT</option>
+        <option value="BINANCE:YFIUSDT">YFI/USDT</option>
+        <option value="BINANCE:SNXUSDT">SNX/USDT</option>
+        <option value="BINANCE:ZRXUSDT">ZRX/USDT</option>
+        <option value="OANDA:XAUUSD">GOLD (XAU/USD)</option>
+        <option value="OANDA:XAGUSD">SILVER (XAG/USD)</option>
+        <option value="USOIL">US OIL (WTI)</option>
+        <option value="NYMEX:CL1!">US OIL Futures</option>
+        <option value="OANDA:US30USD">US30 (Dow Jones)</option>
+        <option value="NASDAQ:NDX">NASDAQ 100</option>
+        <option value="SP:SPX">S&P 500</option>
+      </select>
+      <select id="alert-condition" style="background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--text);font-family:var(--font);">
+        <option value="above">Price goes ABOVE</option>
+        <option value="below">Price goes BELOW</option>
+      </select>
+      <input type="number" id="alert-price" placeholder="Enter price" step="any" style="background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--text);font-family:var(--font);width:140px;">
+      <button onclick="addAlert()" style="background:var(--yellow);color:#000;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);">🔔 Set Alert</button>
+    </div>
+    <div id="alert-list" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+  </div>
+  <div class="chart-tabs" id="chart-tab-row">
+    <button class="ctab active" onclick="changeChart('ETHUSDT',this)">ETH</button>
+    <button class="ctab" onclick="changeChart('BTCUSDT',this)">BTC</button>
+    <button class="ctab" onclick="changeChart('SOLUSDT',this)">SOL</button>
+    <button class="ctab" onclick="changeChart('BNBUSDT',this)">BNB</button>
+    <button class="ctab" onclick="changeChart('XRPUSDT',this)">XRP</button>
+    <button class="ctab" onclick="changeChart('ADAUSDT',this)">ADA</button>
+    <button class="ctab" onclick="changeChart('DOGEUSDT',this)">DOGE</button>
+    <button class="ctab" onclick="changeChart('AVAXUSDT',this)">AVAX</button>
+    <button class="ctab" onclick="changeChart('DOTUSDT',this)">DOT</button>
+    <button class="ctab" onclick="changeChart('LINKUSDT',this)">LINK</button>
+    <button class="ctab" onclick="changeChart('MATICUSDT',this)">MATIC</button>
+    <button class="ctab" onclick="changeChart('OPUSDT',this)">OP</button>
+    <button class="ctab" onclick="changeChart('ARBUSDT',this)">ARB</button>
+    <button class="ctab" onclick="changeChart('SUIUSDT',this)">SUI</button>
+    <button class="ctab" onclick="changeChart('INJUSDT',this)">INJ</button>
+    <button class="ctab" onclick="changeChart('PEPEUSDT',this)">PEPE</button>
+    <button class="ctab" onclick="changeChart('WIFUSDT',this)">WIF</button>
+    <button class="ctab" onclick="changeChart('TONUSDT',this)">TON</button>
+    <button class="ctab" onclick="changeChart('TAOUSDT',this)">TAO</button>
+    <button class="ctab" onclick="changeChart('ONDOUSDT',this)">ONDO</button>
+    <button class="ctab" onclick="changeChart('HBARUSDT',this)">HBAR</button>
+    <button class="ctab" onclick="changeChart('TRXUSDT',this)">TRX</button>
+    <button class="ctab" onclick="changeChart('SHIBUSDT',this)">SHIB</button>
+    <button class="ctab" onclick="changeChart('ICPUSDT',this)">ICP</button>
+    <button class="ctab" onclick="changeChart('FILUSDT',this)">FIL</button>
+    <button class="ctab" onclick="changeChart('XAUUSD',this,'OANDA')">GOLD</button>
+    <button class="ctab" onclick="changeChart('XAGUSD',this,'OANDA')">SILVER</button>
+    <button class="ctab" onclick="changeChart('USOIL',this,'USOIL')">US OIL</button>
   </div>
   <div class="tv-container">
     <div id="tv-widget"></div>
@@ -604,6 +724,11 @@ window.onload = async () => {
   await loadData();
   fetchPrices();
   setInterval(fetchPrices, 15000);
+  renderAlerts();
+  // Request notification permission on load
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
   setInterval(updateOpenTradePnl, 10000);
   renderAll();
   loadTVChart('ETHUSDT');
@@ -1096,15 +1221,19 @@ async function fetchPrices() {
 }
 
 // ── TV CHART ──────────────────────────────────────────────
-function loadTVChart(symbol) {
+function loadTVChart(symbol, exchange) {
   currentSymbol = symbol;
   document.getElementById('tv-widget').innerHTML = '';
   const script = document.createElement('script');
   script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
   script.async = true;
+  let tvSymbol;
+  if (exchange === 'OANDA') tvSymbol = `OANDA:${symbol}`;
+  else if (exchange === 'USOIL') tvSymbol = 'USOIL';
+  else tvSymbol = `BINANCE:${symbol}`;
   script.innerHTML = JSON.stringify({
     autosize: true,
-    symbol: `BINANCE:${symbol}`,
+    symbol: tvSymbol,
     interval: '5',
     timezone: 'Asia/Kolkata',
     theme: 'dark',
@@ -1262,6 +1391,130 @@ function resetChecklist() {
 }
 
 // ── TOAST ─────────────────────────────────────────────────
+
+// ── ALERT SYSTEM ──────────────────────────────────────────
+let priceAlerts = JSON.parse(localStorage.getItem('vj_alerts') || '[]');
+let alertAudio = null;
+
+function addAlert() {
+  const symbol = document.getElementById('alert-symbol').value;
+  const condition = document.getElementById('alert-condition').value;
+  const price = parseFloat(document.getElementById('alert-price').value);
+  if (!price || isNaN(price)) { showToast('Enter a valid price','error'); return; }
+
+  // Request notification permission
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  const symbolName = document.getElementById('alert-symbol').options[document.getElementById('alert-symbol').selectedIndex].text;
+  const alert = {
+    id: Date.now(),
+    symbol: symbol,
+    symbolName: symbolName,
+    condition: condition,
+    price: price,
+    triggered: false,
+    createdAt: new Date().toLocaleTimeString('en-IN')
+  };
+  priceAlerts.push(alert);
+  saveAlerts();
+  renderAlerts();
+  document.getElementById('alert-price').value = '';
+  showToast(`🔔 Alert set: ${symbolName} ${condition} $${price}`, 'success');
+}
+
+function removeAlert(id) {
+  priceAlerts = priceAlerts.filter(a => a.id !== id);
+  saveAlerts();
+  renderAlerts();
+}
+
+function saveAlerts() {
+  localStorage.setItem('vj_alerts', JSON.stringify(priceAlerts));
+}
+
+function renderAlerts() {
+  const container = document.getElementById('alert-list');
+  if (!container) return;
+  if (!priceAlerts.length) { container.innerHTML = ''; return; }
+  container.innerHTML = priceAlerts.map(a => `
+    <div style="display:flex;align-items:center;gap:6px;background:var(--s1);border:1px solid ${a.triggered?'rgba(0,255,157,.3)':'var(--border)'};border-radius:6px;padding:5px 10px;font-size:11px;">
+      <span style="color:${a.triggered?'var(--green)':'var(--yellow)'}">🔔</span>
+      <span style="color:var(--text);font-weight:600;">${a.symbolName.split(' ')[0]}</span>
+      <span style="color:var(--muted);">${a.condition}</span>
+      <span style="color:var(--yellow);font-weight:700;">$${a.price.toLocaleString()}</span>
+      ${a.triggered ? '<span style="color:var(--green);font-size:10px;">✓ HIT</span>' : ''}
+      <span style="color:var(--muted);font-size:10px;">${a.createdAt}</span>
+      <button onclick="removeAlert(${a.id})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:0;margin-left:4px;">×</button>
+    </div>
+  `).join('');
+}
+
+async function checkAlerts() {
+  if (!priceAlerts.length) return;
+  const activeAlerts = priceAlerts.filter(a => !a.triggered);
+  if (!activeAlerts.length) return;
+
+  // Get current prices from Binance for crypto alerts
+  const cryptoAlerts = activeAlerts.filter(a => a.symbol.startsWith('BINANCE:'));
+  const uniqueSymbols = [...new Set(cryptoAlerts.map(a => a.symbol.replace('BINANCE:','')))];
+
+  try {
+    for (const sym of uniqueSymbols) {
+      const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`);
+      const data = await res.json();
+      const currentPrice = parseFloat(data.price);
+
+      priceAlerts.forEach(alert => {
+        if (alert.triggered) return;
+        if (alert.symbol !== `BINANCE:${sym}`) return;
+        const hit = (alert.condition === 'above' && currentPrice >= alert.price) ||
+                    (alert.condition === 'below' && currentPrice <= alert.price);
+        if (hit) {
+          alert.triggered = true;
+          triggerAlert(alert, currentPrice);
+        }
+      });
+    }
+    saveAlerts();
+    renderAlerts();
+  } catch(e) {}
+}
+
+function triggerAlert(alert, currentPrice) {
+  const msg = `🔔 ALERT: ${alert.symbolName.split(' ')[0]} is ${alert.condition} $${alert.price}! Current: $${currentPrice.toFixed(2)}`;
+
+  // Browser notification
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('VJ Trading Desk Alert', {
+      body: msg,
+      icon: '🔔'
+    });
+  }
+
+  // Sound alert
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+    oscillator.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.5);
+  } catch(e) {}
+
+  showToast(msg, 'success');
+}
+
+// Check alerts every 10 seconds
+setInterval(checkAlerts, 10000);
+
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
   document.getElementById('toast-msg').textContent = msg;
