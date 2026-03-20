@@ -13,6 +13,12 @@
   --text:#e8e8f0;--muted:#6b6b8a;--muted2:#4a4a6a;
   --font:'Space Mono',monospace;--display:'Syne',sans-serif;
 }
+body.light-mode{
+  --bg:#f0f2f5;--s1:#ffffff;--s2:#e8eaed;--s3:#dde0e5;
+  --border:#d0d4db;--border2:#b8bcc4;
+  --green:#00a86b;--red:#e0234e;--yellow:#c8960a;--blue:#1a6fd4;--purple:#7c4dff;
+  --text:#1a1a2e;--muted:#666680;--muted2:#999ab0;
+}
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{height:100%;overflow:hidden;}
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12px;display:flex;flex-direction:column;}
@@ -261,6 +267,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
       <div class="lbl">Balance ✏️</div>
       <div class="val" id="top-balance">Loading...</div>
     </div>
+    <button id="theme-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:14px;cursor:pointer;transition:all .2s;">🌙</button>
     <button class="add-btn" onclick="openModal()">+ Add Trade</button>
   </div>
 </div>
@@ -533,7 +540,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
     <button class="ctab" onclick="changeChart('FILUSDT',this)">FIL</button>
     <button class="ctab" onclick="changeChart('XAUUSD',this,'OANDA')">GOLD</button>
     <button class="ctab" onclick="changeChart('XAGUSD',this,'OANDA')">SILVER</button>
-    <button class="ctab" onclick="changeChart('USOIL',this,'USOIL')">US OIL</button>
+    <button class="ctab" onclick="changeChart('USOIL',this,'TVC')">US OIL</button>
   </div>
   <div class="tv-container">
     <div id="tv-widget"></div>
@@ -724,6 +731,7 @@ window.onload = async () => {
   await loadData();
   fetchPrices();
   setInterval(fetchPrices, 15000);
+  initTheme();
   renderAlerts();
   // Request notification permission on load
   if ('Notification' in window && Notification.permission === 'default') {
@@ -1229,18 +1237,18 @@ function loadTVChart(symbol, exchange) {
   script.async = true;
   let tvSymbol;
   if (exchange === 'OANDA') tvSymbol = `OANDA:${symbol}`;
-  else if (exchange === 'USOIL') tvSymbol = 'USOIL';
+  else if (exchange === 'TVC') tvSymbol = `TVC:${symbol}`;
   else tvSymbol = `BINANCE:${symbol}`;
   script.innerHTML = JSON.stringify({
     autosize: true,
     symbol: tvSymbol,
     interval: '5',
     timezone: 'Asia/Kolkata',
-    theme: 'dark',
+    theme: document.body.classList.contains('light-mode') ? 'light' : 'dark',
     style: '1',
     locale: 'en',
     enable_publishing: false,
-    backgroundColor: '#0a0a0f',
+    backgroundColor: document.body.classList.contains('light-mode') ? '#f0f2f5' : '#0a0a0f',
     gridColor: 'rgba(42,42,58,0.5)',
     hide_top_toolbar: false,
     hide_legend: false,
@@ -1391,6 +1399,25 @@ function resetChecklist() {
 }
 
 // ── TOAST ─────────────────────────────────────────────────
+
+
+// ── THEME TOGGLE ──────────────────────────────────────────
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-mode');
+  document.getElementById('theme-btn').textContent = isLight ? '☀️' : '🌙';
+  localStorage.setItem('vj_theme', isLight ? 'light' : 'dark');
+  // Reload chart with new theme
+  loadTVChart(currentSymbol);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('vj_theme');
+  if (saved === 'light') {
+    document.body.classList.add('light-mode');
+    const btn = document.getElementById('theme-btn');
+    if (btn) btn.textContent = '☀️';
+  }
+}
 
 // ── ALERT SYSTEM ──────────────────────────────────────────
 let priceAlerts = JSON.parse(localStorage.getItem('vj_alerts') || '[]');
