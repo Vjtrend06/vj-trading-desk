@@ -903,11 +903,16 @@ async function autoImportBingX() {
       recvWindow: 5000
     });
 
+    const importFromDate = new Date('2026-03-21T00:00:00+05:30').getTime();
+
     if (standardData && standardData.data && standardData.data.orders) {
       for (const raw of standardData.data.orders) {
         const tradeId = 'BX_' + (raw.orderId || raw.id);
         if (importedIds.has(tradeId)) continue;
         if (raw.status !== 'FILLED' && raw.status !== 'CLOSED') continue;
+        // Only import trades from March 21, 2026 onwards
+        const tradeTime = raw.updateTime || raw.time || raw.closeTime || 0;
+        if (tradeTime < importFromDate) continue;
         
         const trade = parseBingXTrade(raw, 'Standard');
         if (!trade.entry || !trade.exit) continue;
@@ -936,6 +941,9 @@ async function autoImportBingX() {
         const tradeId = 'BX_' + (raw.orderId || raw.id);
         if (importedIds.has(tradeId)) continue;
         if (raw.status !== 'FILLED' && raw.status !== 'CLOSED') continue;
+        // Only import trades from March 21, 2026 onwards
+        const tradeTime2 = raw.updateTime || raw.time || raw.closeTime || 0;
+        if (tradeTime2 < importFromDate) continue;
         
         const trade = parseBingXTrade(raw, 'USD-M');
         if (!trade.entry || !trade.exit) continue;
