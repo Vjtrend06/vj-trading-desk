@@ -787,6 +787,35 @@ function setToday() {
   document.getElementById('f-time').value = now.toTimeString().slice(0,5);
 }
 
+// ── DATE NORMALIZATION ───────────────────────────────────
+function normalizeDate(raw) {
+  if (!raw) return '';
+  // Google Sheets serial date number (days since Dec 30, 1899)
+  if (typeof raw === 'number') {
+    const date = new Date((raw - 25569) * 86400 * 1000);
+    return date.toISOString().split('T')[0];
+  }
+  const s = String(raw).trim();
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // YYYY-M-D (no padding)
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)) {
+    const [y,m,d] = s.split('-');
+    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  }
+  // DD/MM/YYYY
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    const [d,m,y] = s.split('/');
+    return `${y}-${m}-${d}`;
+  }
+  // Try JS Date parse as last resort
+  try {
+    const d = new Date(s);
+    if (!isNaN(d)) return d.toISOString().split('T')[0];
+  } catch(e) {}
+  return s;
+}
+
 // ── DATA LOADING — Sheet only, no hardcoded fallback ─────
 async function loadData() {
   try {
@@ -800,7 +829,7 @@ async function loadData() {
     const text = await res.text();
     const data = JSON.parse(text);
     if (data.trades && data.trades.length > 0) {
-      allTrades = data.trades;
+      allTrades = data.trades.map(t => ({...t, date: normalizeDate(t.date)}));
       balance = parseFloat(data.balance) || 1970;
       setSyncLive();
     } else {
@@ -1032,13 +1061,14 @@ function renderStats() {
   const winRate = closed.length ? Math.round(wins.length/closed.length*100) : 0;
 
   const today = new Date().toISOString().split('T')[0];
-  const todayTrades = closed.filter(t => t.date === today);
+  const todayTrades = closed.filter(t => normalizeDate(t.date) === today);
   const todayPnl = todayTrades.reduce((s,t) => s + parseFloat(t.pnl||0), 0);
 
   // Best/worst day
   const byDay = {};
   closed.forEach(t => {
-    byDay[t.date] = (byDay[t.date]||0) + parseFloat(t.pnl||0);
+    const d = normalizeDate(t.date);
+    if (d) byDay[d] = (byDay[d]||0) + parseFloat(t.pnl||0);
   });
   const days = Object.values(byDay);
   const best = days.length ? Math.max(...days) : 0;
@@ -1201,24 +1231,8 @@ function renderCalendar() {
 
   const byDay = {};
   allTrades.forEach(t => {
-    // Normalize date - Sheet may return dates in different formats
-    let d = t.date;
+    const d = normalizeDate(t.date);
     if (!d) return;
-    // Handle Date object or timestamp
-    if (typeof d === 'number') d = new Date(d).toISOString().split('T')[0];
-    else if (typeof d === 'string') {
-      // Handle formats like "2026-3-19" or "19/03/2026"
-      if (d.includes('/')) {
-        const parts = d.split('/');
-        d = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-      } else {
-        // Normalize "2026-3-19" to "2026-03-19"
-        const parts = d.split('-');
-        if (parts.length === 3) {
-          d = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
-        }
-      }
-    }
     if (!byDay[d]) byDay[d] = {pnl:0, trades:0};
     if (t.result !== 'Open') byDay[d].pnl += parseFloat(t.pnl||0);
     byDay[d].trades++;
@@ -1258,19 +1272,7 @@ function selectDay(date) {
 }
 
 function renderDayDetail(date) {
-  const trades = allTrades.filter(t => {
-    let d = t.date;
-    if (!d) return false;
-    if (typeof d === 'number') d = new Date(d).toISOString().split('T')[0];
-    else if (typeof d === 'string' && d.includes('/')) {
-      const parts = d.split('/');
-      d = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-    } else if (typeof d === 'string') {
-      const parts = d.split('-');
-      if (parts.length === 3) d = `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
-    }
-    return d === date;
-  });
+  const trades = allTrades.filter(t => normalizeDate(t.date) === date);
   const wrap = document.getElementById('day-detail-wrap');
   if (!trades.length) { wrap.innerHTML = ''; return; }
 
