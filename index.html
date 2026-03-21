@@ -280,6 +280,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
       <div class="val" id="top-balance">Loading...</div>
     </div>
     <button id="theme-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:14px;cursor:pointer;transition:all .2s;">🌙</button>
+    <button onclick="manualImport()" title="Import trades from BingX" style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:11px;color:var(--text);cursor:pointer;font-family:var(--font);font-weight:700;">⬇ Import</button>
     <button class="add-btn" onclick="openModal()">+ Add Trade</button>
   </div>
 </div>
@@ -744,6 +745,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4xvjR0TnMMwkYzxV6gqY4fbJAdTgRMPrWOhrAnm5g7YVbzsbpQP69OkyxeQuOhVaP/exec';
 
+// ── BINGX API CONFIG ──────────────────────────────────────
+const BINGX_API_KEY = 'BQhMAcjlO9r2MmEChEaPsArhEB7gTFPbFIQ0YDYOPP1b08GujqTyW1g4JUkXL0O77yZaxtARXPEZPilAKXhvMQ';
+const BINGX_SECRET = 'q5uxhqBTPmUi9wCgsn0o99aGbcoYVYzjrjEeiFs6xZBUYb0zQjD98fANpFvDQsx7b0wg6E7MaCH4uUjGwzJg';
+const BINGX_PROXY = 'https://api.allorigins.win/raw?url=';
+
 let allTrades = [];
 let balance = 1970;
 let currentFilter = 'all';
@@ -770,6 +776,9 @@ window.onload = async () => {
   setInterval(updateOpenTradePnl, 3000);
   renderAll();
   loadTVChart('ETHUSDT');
+  // Auto-import from BingX every 30 seconds
+  autoImportBingX();
+  setInterval(autoImportBingX, 30000);
 };
 
 function setToday() {
@@ -808,6 +817,158 @@ async function loadData() {
 }
 
 
+
+
+// ── BINGX AUTO-IMPORT ─────────────────────────────────────
+let lastImportTime = 0;
+let importedIds = new Set(JSON.parse(localStorage.getItem('vj_imported_ids') || '[]'));
+
+async function generateSignature(params, secret) {
+  const paramStr = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('&');
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const msgData = encoder.encode(paramStr);
+  const cryptoKey = await crypto.subtle.importKey('raw', keyData, {name:'HMAC', hash:'SHA-256'}, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function fetchBingXTrades(endpoint, params) {
+  try {
+    const timestamp = Date.now();
+    const allParams = {...params, timestamp};
+    const signature = await generateSignature(allParams, BINGX_SECRET);
+    const queryStr = Object.keys(allParams).sort().map(k => `${k}=${allParams[k]}`).join('&');
+    const url = `https://open-api.bingx.com${endpoint}?${queryStr}&signature=${signature}`;
+    const proxyUrl = BINGX_PROXY + encodeURIComponent(url);
+    const res = await fetch(proxyUrl, {
+      headers: {'X-BX-APIKEY': BINGX_API_KEY}
+    });
+    const data = await res.json();
+    return data;
+  } catch(e) {
+    console.log('BingX fetch error:', e);
+    return null;
+  }
+}
+
+function parseBingXTrade(raw, type) {
+  // Parse trade from BingX API response
+  const pnl = parseFloat(raw.profit || raw.realisedPNL || raw.pnl || 0);
+  const entry = parseFloat(raw.avgPrice || raw.entryPrice || raw.price || 0);
+  const exit = parseFloat(raw.closePrice || raw.avgClosePrice || 0);
+  const size = parseFloat(raw.positionAmt || raw.quantity || raw.origQty || 0);
+  const leverage = parseInt(raw.leverage || 1);
+  const side = (raw.side || raw.positionSide || '').toUpperCase();
+  const direction = side === 'SELL' || side === 'SHORT' ? 'Short' : 'Long';
+  const symbol = (raw.symbol || '').replace('USDT', '/USDT').replace('-USDT', '/USDT') || 'ETH/USDT';
+  const closeTime = raw.updateTime || raw.time || raw.closeTime || Date.now();
+  const date = new Date(closeTime);
+  const dateStr = date.toISOString().split('T')[0];
+  const timeStr = date.toTimeString().slice(0,5);
+  const tradeId = 'BX_' + (raw.orderId || raw.id || closeTime);
+
+  return {
+    id: tradeId,
+    date: dateStr,
+    time: timeStr,
+    pair: symbol,
+    direction,
+    entry,
+    exit,
+    sl: 0,
+    tp: 0,
+    leverage,
+    size: Math.abs(size * entry),
+    pnl: parseFloat(pnl.toFixed(2)),
+    type: 'Solo',
+    result: pnl > 0 ? 'Win' : pnl < 0 ? 'Loss' : 'Breakeven',
+    notes: `Auto-imported from BingX ${type}`
+  };
+}
+
+async function autoImportBingX() {
+  if (!BINGX_API_KEY || !BINGX_SECRET) return;
+  
+  const now = Date.now();
+  if (now - lastImportTime < 25000) return; // min 25s between imports
+  lastImportTime = now;
+
+  let newTradesFound = 0;
+
+  try {
+    // Fetch from Standard Futures
+    const standardData = await fetchBingXTrades('/openApi/contract/v1/allOrders', {
+      limit: 20,
+      recvWindow: 5000
+    });
+
+    if (standardData && standardData.data && standardData.data.orders) {
+      for (const raw of standardData.data.orders) {
+        const tradeId = 'BX_' + (raw.orderId || raw.id);
+        if (importedIds.has(tradeId)) continue;
+        if (raw.status !== 'FILLED' && raw.status !== 'CLOSED') continue;
+        
+        const trade = parseBingXTrade(raw, 'Standard');
+        if (!trade.entry || !trade.exit) continue;
+        
+        importedIds.add(tradeId);
+        allTrades.unshift(trade);
+        newTradesFound++;
+        
+        // Save to Sheet
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify({action: 'addTrade', trade})
+        }).catch(() => {});
+      }
+    }
+
+    // Fetch from USD-M Perpetual Futures
+    const usdmData = await fetchBingXTrades('/openApi/swap/v2/trade/allOrders', {
+      limit: 20,
+      recvWindow: 5000
+    });
+
+    if (usdmData && usdmData.data && usdmData.data.orders) {
+      for (const raw of usdmData.data.orders) {
+        const tradeId = 'BX_' + (raw.orderId || raw.id);
+        if (importedIds.has(tradeId)) continue;
+        if (raw.status !== 'FILLED' && raw.status !== 'CLOSED') continue;
+        
+        const trade = parseBingXTrade(raw, 'USD-M');
+        if (!trade.entry || !trade.exit) continue;
+        
+        importedIds.add(tradeId);
+        allTrades.unshift(trade);
+        newTradesFound++;
+        
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify({action: 'addTrade', trade})
+        }).catch(() => {});
+      }
+    }
+
+    if (newTradesFound > 0) {
+      localStorage.setItem('vj_imported_ids', JSON.stringify([...importedIds]));
+      renderAll();
+      showToast(`✅ ${newTradesFound} new trade${newTradesFound > 1 ? 's' : ''} imported from BingX!`, 'success');
+    }
+
+  } catch(e) {
+    console.log('Auto-import error:', e);
+  }
+}
+
+// Manual import trigger
+function manualImport() {
+  lastImportTime = 0;
+  showToast('Importing from BingX...', 'success');
+  autoImportBingX();
+}
 
 // ── SYNC STATUS ────────────────────────────────────────────
 function showSyncing() {
