@@ -357,7 +357,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
           <div class="price-item"><div class="price-dot" style="background:#e67e22"></div><div class="price-sym" style="color:#e67e22">GOLD</div><div class="price-val" id="p-gold">—</div><div class="price-chg" id="c-gold">—</div></div>
         </div>
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--s2);font-size:9px;color:var(--muted);text-align:center;">
-          <span id="price-api-label">Auto-refresh every 15s · Binance API</span>
+          <span id="price-api-label">WebSocket · Realtime · Binance</span>
         </div>
       </div>
     </div>
@@ -765,8 +765,14 @@ window.onload = async () => {
   setToday();
   showSyncing();
   await loadData();
+  // Start WebSocket for realtime prices
+  fetch24hrChange();
+  startPriceWebSocket();
+  fetchGold();
   fetchPrices();
-  setInterval(fetchPrices, 8000);
+  // Refresh 24hr change % and gold every 60s
+  setInterval(fetch24hrChange, 60000);
+  setInterval(fetchGold, 60000);
   initTheme();
   renderAlerts();
   // Request notification permission on load
@@ -1381,61 +1387,131 @@ function renderAnalytics() {
   document.getElementById('ana-pairs').innerHTML = pairsHtml || '<div style="color:var(--muted);font-size:12px;">No data</div>';
 }
 
-// ── LIVE PRICES ────────────────────────────────────────────
-async function fetchPrices() {
-  // Use Binance directly - most reliable, no CORS issues
+// ── LIVE PRICES — WebSocket (realtime, zero lag) ───────────
+// Stores 24hr change % from REST snapshot (updated every 60s)
+const pct24h = {BTC:0, ETH:0, SOL:0};
+
+// Fetch 24hr change % once on load, refresh every 60s
+async function fetch24hrChange() {
   const pairs = [
-    {symbol:'BTCUSDT', elId:'btc', isBTC:true},
-    {symbol:'ETHUSDT', elId:'eth', isBTC:false},
-    {symbol:'SOLUSDT', elId:'sol', isBTC:false}
+    {symbol:'BTCUSDT', key:'BTC'},
+    {symbol:'ETHUSDT', key:'ETH'},
+    {symbol:'SOLUSDT', key:'SOL'}
   ];
   try {
     const results = await Promise.all(
       pairs.map(p => fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${p.symbol}`).then(r=>r.json()))
     );
     results.forEach((data, i) => {
-      const {elId, isBTC} = pairs[i];
-      const price = parseFloat(data.lastPrice);
-      const chg = parseFloat(data.priceChangePercent);
-      const sym = pairs[i].symbol.replace('USDT','');
-      prices[sym] = price;
-      const priceEl = document.getElementById(`p-${elId}`);
-      const chgEl = document.getElementById(`c-${elId}`);
-      if (priceEl) priceEl.textContent = '$'+price.toLocaleString(undefined,{minimumFractionDigits:isBTC?0:2,maximumFractionDigits:isBTC?0:2});
-      if (chgEl) {
-        chgEl.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%';
-        chgEl.className = 'price-chg '+(chg>=0?'up':'dn');
-      }
+      pct24h[pairs[i].key] = parseFloat(data.priceChangePercent)||0;
     });
-    // GOLD via multiple fallback APIs
+  } catch(e) {}
+}
+
+// Update a single price element instantly
+function updatePriceEl(elId, price, isBTC) {
+  const priceEl = document.getElementById(`p-${elId}`);
+  const chgEl   = document.getElementById(`c-${elId}`);
+  const key      = elId.toUpperCase();
+  const chg      = pct24h[key] || 0;
+  if (priceEl) {
+    priceEl.textContent = '$'+price.toLocaleString(undefined,{
+      minimumFractionDigits: isBTC?0:2,
+      maximumFractionDigits: isBTC?0:2
+    });
+    // Flash green/red on update
+    priceEl.style.transition = 'color 0.15s';
+    priceEl.style.color = 'var(--yellow)';
+    setTimeout(()=>{ priceEl.style.color = ''; }, 200);
+  }
+  if (chgEl) {
+    chgEl.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%';
+    chgEl.className = 'price-chg '+(chg>=0?'up':'dn');
+  }
+}
+
+// Start Binance WebSocket — streams BTC, ETH, SOL tick by tick
+let wsInstance = null;
+function startPriceWebSocket() {
+  if (wsInstance) { try { wsInstance.close(); } catch(e){} }
+
+  const streams = 'btcusdt@aggTrade/ethusdt@aggTrade/solusdt@aggTrade';
+  const ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`);
+  wsInstance = ws;
+
+  ws.onopen = () => {
+    const dot = document.getElementById('sync-dot');
+    if (dot) { dot.className = 'sync-dot live'; }
+    document.getElementById('price-api-label').textContent = 'WebSocket · Realtime · Binance';
+    document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
+  };
+
+  ws.onmessage = (event) => {
     try {
-      // Try gold-api.com first
-      const goldRes = await fetch('https://api.gold-api.com/price/XAU');
-      const goldData = await goldRes.json();
-      const goldPrice = goldData?.price || goldData?.regularMarketPrice;
-      if (goldPrice) {
-        const priceEl = document.getElementById('p-gold');
-        const chgEl = document.getElementById('c-gold');
-        if (priceEl) priceEl.textContent = '$'+parseFloat(goldPrice).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-        if (chgEl) { 
-          const chgPct = goldData?.chp || goldData?.ch || 0;
-          chgEl.textContent = (chgPct>=0?'+':'')+parseFloat(chgPct).toFixed(2)+'%';
-          chgEl.className = 'price-chg '+(chgPct>=0?'up':'dn');
-        }
+      const msg  = JSON.parse(event.data);
+      const data = msg.data;
+      const sym  = data.s; // e.g. BTCUSDT
+      const price = parseFloat(data.p);
+
+      if (sym === 'BTCUSDT') {
+        prices['BTC'] = price;
+        updatePriceEl('btc', price, true);
+      } else if (sym === 'ETHUSDT') {
+        prices['ETH'] = price;
+        updatePriceEl('eth', price, false);
+      } else if (sym === 'SOLUSDT') {
+        prices['SOL'] = price;
+        updatePriceEl('sol', price, false);
       }
-    } catch(eg) {
-      // Fallback: show static label
+
+      // Update time & open trade PnL on every tick
+      document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
+      renderOpenTrade();
+    } catch(e) {}
+  };
+
+  ws.onerror = () => {
+    const dot = document.getElementById('sync-dot');
+    if (dot) dot.className = 'sync-dot error';
+  };
+
+  ws.onclose = () => {
+    // Auto-reconnect after 3 seconds
+    const dot = document.getElementById('sync-dot');
+    if (dot) dot.className = 'sync-dot error';
+    document.getElementById('price-api-label').textContent = 'Reconnecting...';
+    setTimeout(startPriceWebSocket, 3000);
+  };
+}
+
+// Fetch gold price (REST, no WebSocket available) every 60s
+async function fetchGold() {
+  try {
+    const goldRes  = await fetch('https://api.gold-api.com/price/XAU');
+    const goldData = await goldRes.json();
+    const goldPrice = goldData?.price || goldData?.regularMarketPrice;
+    if (goldPrice) {
       const priceEl = document.getElementById('p-gold');
-      if (priceEl && priceEl.textContent === '—') {
-        priceEl.textContent = 'N/A';
+      const chgEl   = document.getElementById('c-gold');
+      if (priceEl) priceEl.textContent = '$'+parseFloat(goldPrice).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+      if (chgEl) {
+        const chgPct = goldData?.chp || goldData?.ch || 0;
+        chgEl.textContent = (chgPct>=0?'+':'')+parseFloat(chgPct).toFixed(2)+'%';
+        chgEl.className = 'price-chg '+(chgPct>=0?'up':'dn');
       }
     }
-    document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
-    document.getElementById('price-api-label').textContent = 'Auto-refresh every 15s · Binance API';
-    renderOpenTrade();
-  } catch(e) {
-    console.log('Price fetch failed:', e);
+  } catch(eg) {
+    const priceEl = document.getElementById('p-gold');
+    if (priceEl && priceEl.textContent === '—') priceEl.textContent = 'N/A';
   }
+}
+
+// fetchPrices kept as manual refresh fallback (refresh button)
+async function fetchPrices() {
+  await fetch24hrChange();
+  await fetchGold();
+  // WebSocket handles crypto prices — just update time
+  document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
 }
 
 // ── TV CHART ──────────────────────────────────────────────
