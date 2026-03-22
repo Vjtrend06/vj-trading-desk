@@ -255,6 +255,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
 .refresh-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:10px;color:var(--muted);cursor:pointer;font-family:var(--font);margin-left:8px;}
 .refresh-btn:hover{color:var(--text);}
 </style>
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
 
@@ -838,7 +839,8 @@ window.onload = async () => {
   }
   setInterval(updateOpenTradePnl, 3000);
   renderAll();
-  // Chart boots when Charts tab is clicked
+  // Pre-load chart on startup
+  setTimeout(_lwBoot, 800);
   // Auto-import from BingX every 30 seconds
   autoImportBingX();
   setInterval(autoImportBingX, 30000);
@@ -2069,6 +2071,5 @@ function showToast(msg, type='success') {
   setTimeout(()=>t.classList.remove('show'), 3000);
 }
 </script>
-<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 </body>
 </html>
