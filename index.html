@@ -1836,7 +1836,12 @@ function resetChecklist() {
 }
 
 // ── TOAST ─────────────────────────────────────────────────
-
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
 
 // ── THEME TOGGLE ──────────────────────────────────────────
 function toggleTheme() {
