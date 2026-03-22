@@ -765,20 +765,24 @@ window.onload = async () => {
   setToday();
   showSyncing();
   await loadData();
+  _fetch24h();
+  _startPriceWS();
+  _fetchGold();
+  setInterval(_fetchGold, 60000);
+  setInterval(_fetch24h, 60000);
   fetchPrices();
-  setInterval(fetchPrices, 8000);
   initTheme();
   renderAlerts();
-  // Request notification permission on load
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
   }
   setInterval(updateOpenTradePnl, 3000);
   renderAll();
   loadTVChart('ETHUSDT');
-  // Auto-import from BingX every 30 seconds
   autoImportBingX();
   setInterval(autoImportBingX, 30000);
+  _fetchBingXPositions();
+  setInterval(_fetchBingXPositions, 10000);
 };
 
 function setToday() {
@@ -819,13 +823,7 @@ function normalizeDate(raw) {
 // ── DATA LOADING — Sheet only, no hardcoded fallback ─────
 async function loadData() {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(SCRIPT_URL + '?t=' + Date.now(), {
-      method:'GET',
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
+    const res = await fetch(SCRIPT_URL + '?t=' + Date.now());
     const text = await res.text();
     const data = JSON.parse(text);
     if (data.trades && data.trades.length > 0) {
@@ -1381,61 +1379,134 @@ function renderAnalytics() {
   document.getElementById('ana-pairs').innerHTML = pairsHtml || '<div style="color:var(--muted);font-size:12px;">No data</div>';
 }
 
-// ── LIVE PRICES ────────────────────────────────────────────
-async function fetchPrices() {
-  // Use Binance directly - most reliable, no CORS issues
-  const pairs = [
-    {symbol:'BTCUSDT', elId:'btc', isBTC:true},
-    {symbol:'ETHUSDT', elId:'eth', isBTC:false},
-    {symbol:'SOLUSDT', elId:'sol', isBTC:false}
-  ];
+// ── LIVE PRICES — WebSocket realtime ──────────────────────
+const _pct24 = {BTC:0,ETH:0,SOL:0};
+
+async function _fetch24h() {
   try {
-    const results = await Promise.all(
-      pairs.map(p => fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${p.symbol}`).then(r=>r.json()))
-    );
-    results.forEach((data, i) => {
-      const {elId, isBTC} = pairs[i];
-      const price = parseFloat(data.lastPrice);
-      const chg = parseFloat(data.priceChangePercent);
-      const sym = pairs[i].symbol.replace('USDT','');
-      prices[sym] = price;
-      const priceEl = document.getElementById(`p-${elId}`);
-      const chgEl = document.getElementById(`c-${elId}`);
-      if (priceEl) priceEl.textContent = '$'+price.toLocaleString(undefined,{minimumFractionDigits:isBTC?0:2,maximumFractionDigits:isBTC?0:2});
-      if (chgEl) {
-        chgEl.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%';
-        chgEl.className = 'price-chg '+(chg>=0?'up':'dn');
-      }
-    });
-    // GOLD via multiple fallback APIs
+    const r = await Promise.all([
+      fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT').then(r=>r.json()),
+      fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT').then(r=>r.json()),
+      fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=SOLUSDT').then(r=>r.json()),
+    ]);
+    _pct24.BTC = parseFloat(r[0].priceChangePercent)||0;
+    _pct24.ETH = parseFloat(r[1].priceChangePercent)||0;
+    _pct24.SOL = parseFloat(r[2].priceChangePercent)||0;
+  } catch(e){}
+}
+
+function _updatePriceTile(elId, price, isBTC, sym) {
+  const chg = _pct24[sym]||0;
+  const priceEl = document.getElementById('p-'+elId);
+  const chgEl   = document.getElementById('c-'+elId);
+  if (priceEl) priceEl.textContent = '$'+price.toLocaleString(undefined,{minimumFractionDigits:isBTC?0:2,maximumFractionDigits:isBTC?0:2});
+  if (chgEl) { chgEl.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%'; chgEl.className='price-chg '+(chg>=0?'up':'dn'); }
+}
+
+let _priceWS = null;
+function _startPriceWS() {
+  if (_priceWS) { try{_priceWS.close();}catch(e){} }
+  const ws = new WebSocket('wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/ethusdt@aggTrade/solusdt@aggTrade');
+  _priceWS = ws;
+  ws.onopen = () => {
+    const d = document.getElementById('sync-dot');
+    if (d) d.className = 'sync-dot live';
+    document.getElementById('price-api-label').textContent = 'WebSocket · Realtime · Binance';
+  };
+  ws.onmessage = (e) => {
     try {
-      // Try gold-api.com first
-      const goldRes = await fetch('https://api.gold-api.com/price/XAU');
-      const goldData = await goldRes.json();
-      const goldPrice = goldData?.price || goldData?.regularMarketPrice;
-      if (goldPrice) {
-        const priceEl = document.getElementById('p-gold');
-        const chgEl = document.getElementById('c-gold');
-        if (priceEl) priceEl.textContent = '$'+parseFloat(goldPrice).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-        if (chgEl) { 
-          const chgPct = goldData?.chp || goldData?.ch || 0;
-          chgEl.textContent = (chgPct>=0?'+':'')+parseFloat(chgPct).toFixed(2)+'%';
-          chgEl.className = 'price-chg '+(chgPct>=0?'up':'dn');
-        }
-      }
-    } catch(eg) {
-      // Fallback: show static label
-      const priceEl = document.getElementById('p-gold');
-      if (priceEl && priceEl.textContent === '—') {
-        priceEl.textContent = 'N/A';
-      }
+      const msg = JSON.parse(e.data);
+      const sym = msg.data.s;
+      const price = parseFloat(msg.data.p);
+      if (sym==='BTCUSDT') { prices['BTC']=price; _updatePriceTile('btc',price,true,'BTC'); }
+      else if (sym==='ETHUSDT') { prices['ETH']=price; _updatePriceTile('eth',price,false,'ETH'); }
+      else if (sym==='SOLUSDT') { prices['SOL']=price; _updatePriceTile('sol',price,false,'SOL'); }
+      document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
+      renderOpenTrade();
+    } catch(e){}
+  };
+  ws.onclose = () => { setTimeout(_startPriceWS, 3000); };
+  ws.onerror = () => { ws.close(); };
+}
+
+async function _fetchGold() {
+  try {
+    const r = await fetch('https://api.gold-api.com/price/XAU');
+    const d = await r.json();
+    const p = d?.price||d?.regularMarketPrice;
+    if (p) {
+      const el=document.getElementById('p-gold'); if(el) el.textContent='$'+parseFloat(p).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+      const ce=document.getElementById('c-gold'); if(ce){ const chg=d?.chp||d?.ch||0; ce.textContent=(chg>=0?'+':'')+parseFloat(chg).toFixed(2)+'%'; ce.className='price-chg '+(chg>=0?'up':'dn'); }
     }
-    document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
-    document.getElementById('price-api-label').textContent = 'Auto-refresh every 15s · Binance API';
-    renderOpenTrade();
-  } catch(e) {
-    console.log('Price fetch failed:', e);
+  } catch(e){}
+}
+
+// ── BINGX OPEN POSITIONS — Dashboard ─────────────────────
+const _BXKEY = 'BQhMAcjlO9r2MmEChEaPsArhEB7gTFPbFIQ0YDYOPP1b08GujqTyW1g4JUkXL0O77yZaxtARXPEZPilAKXhvMQ';
+const _BXSEC = 'q5uxhqBTPmUi9wCgsn0o99aGbcoYVYzjrjEeiFs6xZBUYb0zQjD98fANpFvDQsx7b0wg6E7MaCH4uUjGwzJg';
+
+async function _fetchBingXPositions() {
+  try {
+    const ts  = Date.now();
+    const q   = `timestamp=${ts}`;
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey('raw',enc.encode(_BXSEC),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+    const sig = await crypto.subtle.sign('HMAC',key,enc.encode(q));
+    const hex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const res = await fetch(`https://open-api.bingx.com/openApi/swap/v2/user/positions?${q}&signature=${hex}`,{headers:{'X-BX-APIKEY':_BXKEY}});
+    const data = await res.json();
+    if (data.code===0 && data.data) {
+      const active = data.data.filter(p=>parseFloat(p.positionAmt||0)!==0);
+      _renderBingXPositions(active);
+      // Update prices map with BingX live prices
+      active.forEach(p => {
+        const sym = p.symbol.replace('-USDT','');
+        const livePrice = parseFloat(p.markPrice||p.entryPrice||0);
+        if (livePrice && sym) prices[sym] = livePrice;
+      });
+      if (active.length) renderOpenTrade();
+    }
+  } catch(e) {}
+}
+
+function _renderBingXPositions(positions) {
+  // Update or create position bar below open trade card
+  let bar = document.getElementById('bx-pos-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'bx-pos-bar';
+    bar.style.cssText = 'background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:11px;margin-bottom:12px;';
+    const openCard = document.getElementById('open-trade-card');
+    if (openCard && openCard.parentNode) openCard.parentNode.insertBefore(bar, openCard);
   }
+  if (!positions.length) {
+    bar.innerHTML = '<span style="color:var(--muted);font-size:10px;">BINGX POSITIONS: No open positions</span>';
+    return;
+  }
+  const html = positions.map(p => {
+    const sym  = p.symbol.replace('-USDT','');
+    const isLong = parseFloat(p.positionAmt)>0;
+    const pnl  = parseFloat(p.unrealizedProfit||0);
+    const entry= parseFloat(p.avgPrice||p.entryPrice||0);
+    const mark = parseFloat(p.markPrice||0);
+    const liq  = parseFloat(p.liquidationPrice||0);
+    const pnlColor = pnl>=0?'var(--green)':'var(--red)';
+    return `<span style="margin-right:16px;display:inline-flex;gap:6px;align-items:center;">
+      <span style="color:var(--yellow);font-weight:700;">${sym}</span>
+      <span class="badge ${isLong?'long':'short'}">${isLong?'LONG':'SHORT'}</span>
+      <span style="color:var(--muted)">Entry:${entry.toFixed(2)}</span>
+      ${mark?`<span style="color:var(--text)">Mark:${mark.toFixed(2)}</span>`:''}
+      <span style="color:${pnlColor};font-weight:700;">${pnl>=0?'+':''}$${pnl.toFixed(2)}</span>
+      ${liq?`<span style="color:var(--red);font-size:10px;">Liq:${liq.toFixed(2)}</span>`:''}
+    </span>`;
+  }).join('');
+  bar.innerHTML = `<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🔴 BingX Live Positions</div><div>${html}</div>`;
+}
+
+// Keep fetchPrices as manual refresh only
+async function fetchPrices() {
+  await _fetch24h();
+  await _fetchGold();
 }
 
 // ── TV CHART ──────────────────────────────────────────────
