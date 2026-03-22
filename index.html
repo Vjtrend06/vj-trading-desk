@@ -190,16 +190,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
 .ctab{background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:11px;font-family:var(--font);color:var(--muted);cursor:pointer;transition:all .15s;}
 .ctab:hover{color:var(--text);}
 .ctab.active{border-color:var(--yellow);color:var(--yellow);}
-.lw-container{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-.lw-tf-btn{background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:10px;font-family:var(--font);color:var(--muted);cursor:pointer;}
-.lw-tf-btn.active{background:var(--yellow);color:#0a0a0f;border-color:var(--yellow);font-weight:700;}
-#lw-chart-wrap{width:100%;height:500px;}
-.lw-bar{background:var(--s2);border-top:1px solid var(--border);padding:6px 12px;display:flex;align-items:center;gap:12px;font-size:10px;}
-.lw-bar span{color:var(--muted);}
-.lw-bar b{color:var(--text);}
-.lw-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);}
-.lw-dot.live{background:var(--green);}
-.lw-dot.err{background:var(--red);}
+.tv-container{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;height:calc(100vh - 200px);}
+#tv-widget{width:100%;height:100%;}
 
 /* RULES */
 .rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -255,7 +247,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
 .refresh-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:10px;color:var(--muted);cursor:pointer;font-family:var(--font);margin-left:8px;}
 .refresh-btn:hover{color:var(--text);}
 </style>
-<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
 
@@ -552,93 +543,38 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
     </div>
     <div id="alert-list" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;"></div>
   </div>
-  <div class="chart-tabs" id="chart-tab-row" style="flex-wrap:wrap;">
-    <span style="font-size:9px;color:var(--muted);align-self:center;letter-spacing:1px;text-transform:uppercase;">Crypto</span>
-    <button class="ctab active" onclick="lwSym('ETHUSDT',this)">ETH</button>
-    <button class="ctab" onclick="lwSym('BTCUSDT',this)">BTC</button>
-    <button class="ctab" onclick="lwSym('SOLUSDT',this)">SOL</button>
-    <button class="ctab" onclick="lwSym('BNBUSDT',this)">BNB</button>
-    <button class="ctab" onclick="lwSym('XRPUSDT',this)">XRP</button>
-    <button class="ctab" onclick="lwSym('ADAUSDT',this)">ADA</button>
-    <button class="ctab" onclick="lwSym('DOGEUSDT',this)">DOGE</button>
-    <button class="ctab" onclick="lwSym('AVAXUSDT',this)">AVAX</button>
-    <button class="ctab" onclick="lwSym('DOTUSDT',this)">DOT</button>
-    <button class="ctab" onclick="lwSym('LINKUSDT',this)">LINK</button>
-    <button class="ctab" onclick="lwSym('MATICUSDT',this)">MATIC</button>
-    <button class="ctab" onclick="lwSym('OPUSDT',this)">OP</button>
-    <button class="ctab" onclick="lwSym('ARBUSDT',this)">ARB</button>
-    <button class="ctab" onclick="lwSym('SUIUSDT',this)">SUI</button>
-    <button class="ctab" onclick="lwSym('INJUSDT',this)">INJ</button>
-    <button class="ctab" onclick="lwSym('PEPEUSDT',this)">PEPE</button>
-    <button class="ctab" onclick="lwSym('WIFUSDT',this)">WIF</button>
-    <button class="ctab" onclick="lwSym('TONUSDT',this)">TON</button>
-    <button class="ctab" onclick="lwSym('TAOUSDT',this)">TAO</button>
-    <button class="ctab" onclick="lwSym('ONDOUSDT',this)">ONDO</button>
-    <button class="ctab" onclick="lwSym('HBARUSDT',this)">HBAR</button>
-    <button class="ctab" onclick="lwSym('TRXUSDT',this)">TRX</button>
-    <button class="ctab" onclick="lwSym('SHIBUSDT',this)">SHIB</button>
-    <button class="ctab" onclick="lwSym('ICPUSDT',this)">ICP</button>
-    <button class="ctab" onclick="lwSym('FILUSDT',this)">FIL</button>
-    <button class="ctab" onclick="lwSym('LTCUSDT',this)">LTC</button>
-    <button class="ctab" onclick="lwSym('NEARUSDT',this)">NEAR</button>
-    <button class="ctab" onclick="lwSym('APTUSDT',this)">APT</button>
-    <button class="ctab" onclick="lwSym('ATOMUSDT',this)">ATOM</button>
-    <button class="ctab" onclick="lwSym('UNIUSDT',this)">UNI</button>
-    <button class="ctab" onclick="lwSym('STXUSDT',this)">STX</button>
-    <button class="ctab" onclick="lwSym('FTMUSDT',this)">FTM</button>
-    <button class="ctab" onclick="lwSym('AAVEUSDT',this)">AAVE</button>
-    <button class="ctab" onclick="lwSym('MKRUSDT',this)">MKR</button>
-    <button class="ctab" onclick="lwSym('RUNEUSDT',this)">RUNE</button>
-    <button class="ctab" onclick="lwSym('GRTUSDT',this)">GRT</button>
-    <button class="ctab" onclick="lwSym('RENDERUSDT',this)">RENDER</button>
-    <button class="ctab" onclick="lwSym('FETUSDT',this)">FET</button>
-    <button class="ctab" onclick="lwSym('WLDUSDT',this)">WLD</button>
-    <button class="ctab" onclick="lwSym('EIGENUSDT',this)">EIGEN</button>
-    <span style="font-size:9px;color:var(--muted);align-self:center;letter-spacing:1px;text-transform:uppercase;margin-left:4px;">Commodities</span>
-    <button class="ctab" onclick="lwSym('GOLD-USDT',this)" style="color:var(--yellow)">GOLD</button>
-    <button class="ctab" onclick="lwSym('SILVER-USDT',this)" style="color:#aaa">SILVER</button>
-    <button class="ctab" onclick="lwSym('OIL-USDT',this)" style="color:#f97316">OIL</button>
+  <div class="chart-tabs" id="chart-tab-row">
+    <button class="ctab active" onclick="changeChart('ETHUSDT',this)">ETH</button>
+    <button class="ctab" onclick="changeChart('BTCUSDT',this)">BTC</button>
+    <button class="ctab" onclick="changeChart('SOLUSDT',this)">SOL</button>
+    <button class="ctab" onclick="changeChart('BNBUSDT',this)">BNB</button>
+    <button class="ctab" onclick="changeChart('XRPUSDT',this)">XRP</button>
+    <button class="ctab" onclick="changeChart('ADAUSDT',this)">ADA</button>
+    <button class="ctab" onclick="changeChart('DOGEUSDT',this)">DOGE</button>
+    <button class="ctab" onclick="changeChart('AVAXUSDT',this)">AVAX</button>
+    <button class="ctab" onclick="changeChart('DOTUSDT',this)">DOT</button>
+    <button class="ctab" onclick="changeChart('LINKUSDT',this)">LINK</button>
+    <button class="ctab" onclick="changeChart('MATICUSDT',this)">MATIC</button>
+    <button class="ctab" onclick="changeChart('OPUSDT',this)">OP</button>
+    <button class="ctab" onclick="changeChart('ARBUSDT',this)">ARB</button>
+    <button class="ctab" onclick="changeChart('SUIUSDT',this)">SUI</button>
+    <button class="ctab" onclick="changeChart('INJUSDT',this)">INJ</button>
+    <button class="ctab" onclick="changeChart('PEPEUSDT',this)">PEPE</button>
+    <button class="ctab" onclick="changeChart('WIFUSDT',this)">WIF</button>
+    <button class="ctab" onclick="changeChart('TONUSDT',this)">TON</button>
+    <button class="ctab" onclick="changeChart('TAOUSDT',this)">TAO</button>
+    <button class="ctab" onclick="changeChart('ONDOUSDT',this)">ONDO</button>
+    <button class="ctab" onclick="changeChart('HBARUSDT',this)">HBAR</button>
+    <button class="ctab" onclick="changeChart('TRXUSDT',this)">TRX</button>
+    <button class="ctab" onclick="changeChart('SHIBUSDT',this)">SHIB</button>
+    <button class="ctab" onclick="changeChart('ICPUSDT',this)">ICP</button>
+    <button class="ctab" onclick="changeChart('FILUSDT',this)">FIL</button>
+    <button class="ctab" onclick="changeChart('XAUUSD',this,'OANDA')">GOLD</button>
+    <button class="ctab" onclick="changeChart('XAGUSD',this,'OANDA')">SILVER</button>
+    <button class="ctab" onclick="changeChart('USOIL',this,'TVC')">US OIL</button>
   </div>
-
-  <div class="lw-container">
-    <div style="background:var(--s2);border-bottom:1px solid var(--border);padding:7px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-      <div style="display:flex;gap:4px;">
-        <button class="lw-tf-btn" onclick="lwTF('1m',this)">1m</button>
-        <button class="lw-tf-btn" onclick="lwTF('3m',this)">3m</button>
-        <button class="lw-tf-btn active" onclick="lwTF('5m',this)">5m</button>
-        <button class="lw-tf-btn" onclick="lwTF('15m',this)">15m</button>
-        <button class="lw-tf-btn" onclick="lwTF('30m',this)">30m</button>
-        <button class="lw-tf-btn" onclick="lwTF('1h',this)">1H</button>
-        <button class="lw-tf-btn" onclick="lwTF('2h',this)">2H</button>
-        <button class="lw-tf-btn" onclick="lwTF('4h',this)">4H</button>
-        <button class="lw-tf-btn" onclick="lwTF('1d',this)">1D</button>
-      </div>
-      <div style="display:flex;gap:8px;margin-left:6px;font-size:10px;">
-        <span style="color:#4d9fff;">─ EMA9</span>
-        <span style="color:var(--yellow);">─ EMA21</span>
-        <span style="color:#a78bfa;">─ EMA50</span>
-      </div>
-      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
-        <span id="lw-price" style="font-size:15px;font-weight:700;color:var(--yellow);font-family:var(--font);">--</span>
-        <span id="lw-chg" style="font-size:10px;color:var(--muted);">--</span>
-        <div class="lw-dot" id="lw-dot"></div>
-        <span id="lw-status" style="font-size:9px;color:var(--muted);">Connecting</span>
-      </div>
-    </div>
-    <div id="lw-chart-wrap"></div>
-    <div class="lw-bar">
-      <span>O <b id="lw-o">--</b></span>
-      <span>H <b id="lw-h" style="color:var(--green)">--</b></span>
-      <span>L <b id="lw-l" style="color:var(--red)">--</b></span>
-      <span>C <b id="lw-c" style="color:var(--yellow)">--</b></span>
-      <span>VOL <b id="lw-v" style="color:var(--blue)">--</b></span>
-      <span id="lw-trade-label" style="margin-left:8px;color:var(--muted)"></span>
-      <span style="margin-left:auto;color:var(--border2)">Binance WebSocket · Realtime</span>
-    </div>
-    <div style="background:var(--s2);border-top:1px solid var(--border);padding:5px 12px;font-size:10px;">
-      <span style="color:var(--muted);">BINGX POSITIONS: </span>
-      <span id="lw-positions" style="color:var(--muted);">Loading...</span>
-    </div>
+  <div class="tv-container">
+    <div id="tv-widget"></div>
   </div>
 </div>
 
@@ -839,8 +775,7 @@ window.onload = async () => {
   }
   setInterval(updateOpenTradePnl, 3000);
   renderAll();
-  // Pre-load chart on startup
-  setTimeout(_lwBoot, 800);
+  loadTVChart('ETHUSDT');
   // Auto-import from BingX every 30 seconds
   autoImportBingX();
   setInterval(autoImportBingX, 30000);
@@ -884,7 +819,13 @@ function normalizeDate(raw) {
 // ── DATA LOADING — Sheet only, no hardcoded fallback ─────
 async function loadData() {
   try {
-    const res = await fetch(SCRIPT_URL + '?t=' + Date.now());
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(SCRIPT_URL + '?t=' + Date.now(), {
+      method:'GET',
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
     const text = await res.text();
     const data = JSON.parse(text);
     if (data.trades && data.trades.length > 0) {
@@ -1497,205 +1438,41 @@ async function fetchPrices() {
   }
 }
 
-// ── LIGHTWEIGHT CHART ─────────────────────────────────────
-const BINGX_API_KEY_CHART = 'BQhMAcjlO9r2MmEChEaPsArhEB7gTFPbFIQ0YDYOPP1b08GujqTyW1g4JUkXL0O77yZaxtARXPEZPilAKXhvMQ';
-const BINGX_SECRET_CHART  = 'q5uxhqBTPmUi9wCgsn0o99aGbcoYVYzjrjEeiFs6xZBUYb0zQjD98fANpFvDQsx7b0wg6E7MaCH4uUjGwzJg';
-
-let _lwChart=null, _lwCandle=null, _lwE9=null, _lwE21=null, _lwE50=null, _lwVol=null;
-let _lwSym='ETHUSDT', _lwTF='5m', _lwWS=null, _lwLines=[];
-const _COMMODITY=['GOLD-USDT','SILVER-USDT','OIL-USDT'];
-
-function _lwFmt(p){
-  if(!p||isNaN(p))return'--';
-  const dp=(_lwSym==='BTCUSDT')?0:(_lwSym.includes('SHIB')||_lwSym.includes('PEPE'))?6:2;
-  return'$'+parseFloat(p).toLocaleString(undefined,{minimumFractionDigits:dp,maximumFractionDigits:dp});
-}
-function _ema(data,n){
-  const k=2/(n+1);let e=data[0].close;
-  return data.map((d,i)=>{e=i?d.close*k+e*(1-k):d.close;return{time:d.time,value:parseFloat(e.toFixed(6))};});
-}
-function _lwInit(){
-  const wrap=document.getElementById('lw-chart-wrap');
-  if(!wrap)return;
-  if(_lwChart){try{_lwChart.remove();}catch(e){}  _lwChart=null;}
-  const dark=!document.body.classList.contains('light-mode');
-  _lwChart=LightweightCharts.createChart(wrap,{
-    width:wrap.clientWidth||900, height:500,
-    layout:{background:{color:dark?'#0a0a0f':'#f0f2f5'},textColor:dark?'#6b6b8a':'#666680'},
-    grid:{vertLines:{color:dark?'#1a1a24':'#e0e2e8'},horzLines:{color:dark?'#1a1a24':'#e0e2e8'}},
-    crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
-    rightPriceScale:{borderColor:dark?'#2a2a3a':'#d0d4db'},
-    timeScale:{borderColor:dark?'#2a2a3a':'#d0d4db',timeVisible:true,secondsVisible:false},
+// ── TV CHART ──────────────────────────────────────────────
+function loadTVChart(symbol, exchange) {
+  currentSymbol = symbol;
+  document.getElementById('tv-widget').innerHTML = '';
+  const script = document.createElement('script');
+  script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+  script.async = true;
+  let tvSymbol;
+  if (exchange === 'OANDA') tvSymbol = `OANDA:${symbol}`;
+  else if (exchange === 'TVC') tvSymbol = `TVC:${symbol}`;
+  else tvSymbol = `BINANCE:${symbol}`;
+  script.innerHTML = JSON.stringify({
+    autosize: true,
+    symbol: tvSymbol,
+    interval: '5',
+    timezone: 'Asia/Kolkata',
+    theme: document.body.classList.contains('light-mode') ? 'light' : 'dark',
+    style: '1',
+    locale: 'en',
+    enable_publishing: false,
+    backgroundColor: document.body.classList.contains('light-mode') ? '#f0f2f5' : '#0a0a0f',
+    gridColor: 'rgba(42,42,58,0.5)',
+    hide_top_toolbar: false,
+    hide_legend: false,
+    save_image: false,
+    container_id: 'tv-widget'
   });
-  _lwCandle=_lwChart.addCandlestickSeries({upColor:'#00ff9d',downColor:'#ff3d6b',borderUpColor:'#00ff9d',borderDownColor:'#ff3d6b',wickUpColor:'#00ff9d',wickDownColor:'#ff3d6b'});
-  _lwVol=_lwChart.addHistogramSeries({priceScaleId:'vol',scaleMargins:{top:0.85,bottom:0}});
-  _lwChart.priceScale('vol').applyOptions({scaleMargins:{top:0.85,bottom:0}});
-  _lwE9 =_lwChart.addLineSeries({color:'#4d9fff',lineWidth:1,priceLineVisible:false,lastValueVisible:false});
-  _lwE21=_lwChart.addLineSeries({color:'#ffd060',lineWidth:1,priceLineVisible:false,lastValueVisible:false});
-  _lwE50=_lwChart.addLineSeries({color:'#a78bfa',lineWidth:1,priceLineVisible:false,lastValueVisible:false});
-  _lwChart.subscribeCrosshairMove(p=>{
-    if(!p.time||!p.seriesData)return;
-    const d=p.seriesData.get(_lwCandle); if(!d)return;
-    document.getElementById('lw-o').textContent=_lwFmt(d.open);
-    document.getElementById('lw-h').textContent=_lwFmt(d.high);
-    document.getElementById('lw-l').textContent=_lwFmt(d.low);
-    document.getElementById('lw-c').textContent=_lwFmt(d.close);
-    const v=p.seriesData.get(_lwVol);
-    if(v)document.getElementById('lw-v').textContent=parseFloat(v.value).toLocaleString(undefined,{maximumFractionDigits:0});
-  });
-  new ResizeObserver(()=>{if(_lwChart)_lwChart.applyOptions({width:wrap.clientWidth||900});}).observe(wrap);
+  document.getElementById('tv-widget').appendChild(script);
 }
-async function _lwLoad(sym,tf){
-  try{
-    let candles=[];
-    if(_COMMODITY.includes(sym)){
-      // BingX klines for commodities
-      const bSym=sym; // already in right format
-      const r=await fetch(`https://open-api.bingx.com/openApi/swap/v2/quote/klines?symbol=${bSym}&interval=${tf}&limit=200`);
-      const d=await r.json();
-      if(d.code===0&&d.data)candles=d.data.map(k=>({time:Math.floor(k.time/1000),open:parseFloat(k.open),high:parseFloat(k.high),low:parseFloat(k.low),close:parseFloat(k.close),volume:parseFloat(k.volume)})).sort((a,b)=>a.time-b.time);
-    } else {
-      const r=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${tf}&limit=300`);
-      const raw=await r.json();
-      if(Array.isArray(raw))candles=raw.map(k=>({time:Math.floor(k[0]/1000),open:parseFloat(k[1]),high:parseFloat(k[2]),low:parseFloat(k[3]),close:parseFloat(k[4]),volume:parseFloat(k[5])}));
-    }
-    if(!candles.length)return;
-    _lwCandle.setData(candles);
-    _lwVol.setData(candles.map(c=>({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(0,255,157,0.3)':'rgba(255,61,107,0.3)'})));
-    _lwE9.setData(_ema(candles,9));
-    _lwE21.setData(_ema(candles,21));
-    _lwE50.setData(_ema(candles,50));
-    _lwChart.timeScale().fitContent();
-    const last=candles[candles.length-1];
-    document.getElementById('lw-o').textContent=_lwFmt(last.open);
-    document.getElementById('lw-h').textContent=_lwFmt(last.high);
-    document.getElementById('lw-l').textContent=_lwFmt(last.low);
-    document.getElementById('lw-c').textContent=_lwFmt(last.close);
-    document.getElementById('lw-v').textContent=parseFloat(last.volume).toLocaleString(undefined,{maximumFractionDigits:0});
-    _lwFetch24h(sym);
-    _lwDrawLevels();
-  }catch(e){console.log('chart load err',e);}
+
+function changeChart(symbol, btn, exchange) {
+  document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  loadTVChart(symbol, exchange);
 }
-async function _lwFetch24h(sym){
-  try{
-    if(_COMMODITY.includes(sym)){
-      const r=await fetch(`https://open-api.bingx.com/openApi/swap/v2/quote/ticker?symbol=${sym}`);
-      const d=await r.json();
-      if(d.code===0&&d.data){
-        document.getElementById('lw-price').textContent=_lwFmt(parseFloat(d.data.lastPrice));
-        const chg=parseFloat(d.data.priceChangePercent);
-        const el=document.getElementById('lw-chg');
-        el.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';
-        el.style.color=chg>=0?'var(--green)':'var(--red)';
-      }
-    } else {
-      const r=await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${sym}`);
-      const d=await r.json();
-      document.getElementById('lw-price').textContent=_lwFmt(parseFloat(d.lastPrice));
-      const chg=parseFloat(d.priceChangePercent);
-      const el=document.getElementById('lw-chg');
-      el.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';
-      el.style.color=chg>=0?'var(--green)':'var(--red)';
-    }
-  }catch(e){}
-}
-function _lwDrawLevels(){
-  _lwLines.forEach(l=>{try{_lwCandle.removePriceLine(l);}catch(e){}});
-  _lwLines=[];
-  if(!_lwCandle)return;
-  const open=allTrades.find(t=>!t.exit||t.result==='Open');
-  if(open){
-    const ps=(open.pair||'').replace('/','').replace('.P','').toUpperCase()+'USDT';
-    if(_lwSym===ps||_lwSym.startsWith(ps.replace('USDT',''))){
-      const add=(price,color,title,w,s)=>{if(!price||isNaN(price))return;_lwLines.push(_lwCandle.createPriceLine({price,color,lineWidth:w||1,lineStyle:s||0,axisLabelVisible:true,title}));};
-      add(parseFloat(open.entry),'#ffd060','ENTRY',2,0);
-      add(parseFloat(open.sl),'#ff3d6b','SL',1,1);
-      add(parseFloat(open.tp1),'#00ff9d','TP1',1,1);
-      add(parseFloat(open.tp2),'#00ff9d','TP2',2,0);
-      document.getElementById('lw-trade-label').innerHTML=`<span style="color:var(--yellow)">OPEN</span> ${open.direction} @ ${_lwFmt(parseFloat(open.entry))}`;
-    }
-  }
-}
-function _lwStartWS(sym,tf){
-  if(_lwWS){try{_lwWS.close();}catch(e){}  _lwWS=null;}
-  if(_COMMODITY.includes(sym)){
-    // Poll for commodities
-    _lwWS={_t:setInterval(()=>_lwLoad(sym,tf),3000),close(){clearInterval(this._t);}};
-    return;
-  }
-  const ws=new WebSocket(`wss://stream.binance.com:9443/ws/${sym.toLowerCase()}@kline_${tf}`);
-  _lwWS=ws;
-  ws.onopen=()=>{document.getElementById('lw-dot').className='lw-dot live';document.getElementById('lw-status').textContent='Live';};
-  ws.onmessage=(e)=>{
-    const k=JSON.parse(e.data).k;
-    const c={time:Math.floor(k.t/1000),open:parseFloat(k.o),high:parseFloat(k.h),low:parseFloat(k.l),close:parseFloat(k.c)};
-    _lwCandle.update(c);
-    _lwVol.update({time:c.time,value:parseFloat(k.v),color:c.close>=c.open?'rgba(0,255,157,0.3)':'rgba(255,61,107,0.3)'});
-    document.getElementById('lw-price').textContent=_lwFmt(c.close);
-    document.getElementById('lw-c').textContent=_lwFmt(c.close);
-    if(k.x)_lwLoad(sym,tf); // candle closed — reload for EMA accuracy
-  };
-  ws.onerror=()=>{document.getElementById('lw-dot').className='lw-dot err';document.getElementById('lw-status').textContent='Error';};
-  ws.onclose=()=>{document.getElementById('lw-dot').className='lw-dot err';document.getElementById('lw-status').textContent='Reconnecting...';setTimeout(()=>_lwStartWS(sym,tf),2000);};
-}
-async function _lwBingXPositions(){
-  try{
-    const ts=Date.now();
-    const q=`timestamp=${ts}`;
-    const enc=new TextEncoder();
-    const key=await crypto.subtle.importKey('raw',enc.encode(BINGX_SECRET_CHART),{name:'HMAC',hash:'SHA-256'},false,['sign']);
-    const sig=await crypto.subtle.sign('HMAC',key,enc.encode(q));
-    const hex=Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    const r=await fetch(`https://open-api.bingx.com/openApi/swap/v2/user/positions?${q}&signature=${hex}`,{headers:{'X-BX-APIKEY':BINGX_API_KEY_CHART}});
-    const d=await r.json();
-    const el=document.getElementById('lw-positions');
-    if(d.code===0&&d.data&&d.data.length){
-      const active=d.data.filter(p=>parseFloat(p.positionAmt)!==0);
-      if(!active.length){el.textContent='No open positions';el.style.color='var(--muted)';return;}
-      el.innerHTML=active.map(p=>{
-        const sym=p.symbol.replace('-USDT','');
-        const side=parseFloat(p.positionAmt)>0?'▲ LONG':'▼ SHORT';
-        const pnl=parseFloat(p.unrealizedProfit||0);
-        const c=pnl>=0?'var(--green)':'var(--red)';
-        return`<span style="margin-right:14px">${sym} <span style="color:${p.positionAmt>0?'var(--green)':'var(--red)'}">${side}</span> Entry:${_lwFmt(parseFloat(p.avgPrice||p.entryPrice))} PnL:<span style="color:${c}">${pnl>=0?'+':''}$${pnl.toFixed(2)}</span></span>`;
-      }).join('');
-      // Draw BingX entry lines on chart
-      active.forEach(p=>{
-        const ps=p.symbol.replace('-USDT','')+'USDT';
-        if(_lwSym!==ps)return;
-        const entry=parseFloat(p.avgPrice||p.entryPrice);
-        const liq=parseFloat(p.liquidationPrice);
-        if(entry)_lwLines.push(_lwCandle.createPriceLine({price:entry,color:'#ffd060',lineWidth:2,lineStyle:0,axisLabelVisible:true,title:'BINGX ENTRY'}));
-        if(liq)_lwLines.push(_lwCandle.createPriceLine({price:liq,color:'#ff3d6b',lineWidth:1,lineStyle:3,axisLabelVisible:true,title:'LIQ'}));
-      });
-    } else {
-      el.textContent='No open positions'; el.style.color='var(--muted)';
-    }
-  }catch(e){
-    const el=document.getElementById('lw-positions');
-    if(el){el.textContent='Position fetch failed';el.style.color='var(--red)';}
-  }
-}
-function lwSym(sym,btn){
-  _lwSym=sym;
-  document.querySelectorAll('#chart-tab-row .ctab').forEach(b=>b.classList.remove('active'));
-  if(btn)btn.classList.add('active');
-  _lwLoad(sym,_lwTF); _lwStartWS(sym,_lwTF);
-}
-function lwTF(tf,btn){
-  _lwTF=tf;
-  document.querySelectorAll('.lw-tf-btn').forEach(b=>b.classList.remove('active'));
-  if(btn)btn.classList.add('active');
-  _lwLoad(_lwSym,tf); _lwStartWS(_lwSym,tf);
-}
-function _lwBoot(){
-  if(typeof LightweightCharts==='undefined'){setTimeout(_lwBoot,200);return;}
-  _lwInit(); _lwLoad(_lwSym,_lwTF); _lwStartWS(_lwSym,_lwTF);
-  _lwBingXPositions(); setInterval(_lwBingXPositions,10000);
-}
-// Keep old function names as stubs so nothing else breaks
-function loadTVChart(){}
-function changeChart(){}
 
 // ── MODAL ─────────────────────────────────────────────────
 function openModal() {
@@ -1815,7 +1592,7 @@ function showPanel(name, btn) {
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   btn.classList.add('active');
-  if (name === 'charts') setTimeout(()=>{ if(!_lwChart)_lwBoot(); else{_lwChart.applyOptions({width:document.getElementById('lw-chart-wrap').clientWidth||900});_lwDrawLevels();} }, 100);
+  if (name === 'charts') loadTVChart(currentSymbol);
 }
 
 // ── RULES ─────────────────────────────────────────────────
@@ -1832,12 +1609,7 @@ function resetChecklist() {
 }
 
 // ── TOAST ─────────────────────────────────────────────────
-function showToast(msg, type='success') {
-  const t = document.getElementById('toast');
-  document.getElementById('toast-msg').textContent = msg;
-  t.className = `toast show ${type}`;
-  setTimeout(()=>t.classList.remove('show'), 3000);
-}
+
 
 // ── THEME TOGGLE ──────────────────────────────────────────
 function toggleTheme() {
@@ -1845,7 +1617,7 @@ function toggleTheme() {
   document.getElementById('theme-btn').textContent = isLight ? '☀️' : '🌙';
   localStorage.setItem('vj_theme', isLight ? 'light' : 'dark');
   // Reload chart with new theme
-  if(_lwChart){_lwChart.remove();_lwChart=null;} setTimeout(_lwBoot,100);
+  loadTVChart(currentSymbol);
 }
 
 function initTheme() {
