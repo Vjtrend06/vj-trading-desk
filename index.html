@@ -1506,8 +1506,7 @@ async function fetchPrices() {
 }
 
 // ── CHART ENGINE — BingX + Binance WebSocket ───────────────
-const BINGX_KEY    = 'BQhMAcjlO9r2MmEChEaPsArhEB7gTFPbFIQ0YDYOPP1b08GujqTyW1g4JUkXL0O77yZaxtARXPEZPilAKXhvMQ';
-const BINGX_SECRET = 'q5uxhqBTPmUi9wCgsn0o99aGbcoYVYzjrjEeiFs6xZBUYb0zQjD98fANpFvDQsx7b0wg6E7MaCH4uUjGwzJg';
+// Uses BINGX_API_KEY and BINGX_SECRET already declared above
 
 // Symbol map: chart symbol → BingX perpetual symbol
 const BINGX_SYM = {
@@ -1729,7 +1728,7 @@ async function lwFetchBingXPositions() {
     const sigHex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
 
     const res  = await fetch(`https://open-api.bingx.com/openApi/swap/v2/user/positions?${query}&signature=${sigHex}`,{
-      headers:{'X-BX-APIKEY': BINGX_KEY}
+      headers:{'X-BX-APIKEY': BINGX_API_KEY}
     });
     const data = await res.json();
     if (data.code===0 && data.data) {
