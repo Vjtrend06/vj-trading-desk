@@ -194,7 +194,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
 .lw-topbar{background:var(--s2);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .lw-tf-btn{background:var(--s1);border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:10px;font-family:var(--font);color:var(--muted);cursor:pointer;}
 .lw-tf-btn.active{background:var(--yellow);color:#0a0a0f;border-color:var(--yellow);font-weight:700;}
-#lw-chart-wrap{width:100%;height:calc(100vh - 310px);min-height:400px;position:relative;}
+#lw-chart-wrap{width:100%;height:500px;min-height:400px;position:relative;}
 .lw-bottombar{background:var(--s2);border-top:1px solid var(--border);padding:6px 12px;display:flex;align-items:center;gap:14px;}
 .lw-ohlc{font-size:10px;color:var(--muted);}
 .lw-ohlc span{font-weight:700;}
@@ -842,7 +842,8 @@ window.onload = async () => {
   }
   setInterval(updateOpenTradePnl, 3000);
   renderAll();
-  lwStart();
+  // Chart starts when Charts panel is opened (not on page load)
+  // lwStart() called from showPanel('charts')
   // Auto-import from BingX every 30 seconds
   autoImportBingX();
   setInterval(autoImportBingX, 30000);
@@ -1553,14 +1554,16 @@ function lwInitChart() {
   if (lwChart) { try { lwChart.remove(); } catch(e){} lwChart = null; }
 
   const isDark = !document.body.classList.contains('light-mode');
+  const w = Math.max(wrap.clientWidth, 600);
+  const h = 500;
   const bg  = isDark ? '#0a0a0f' : '#f0f2f5';
   const txt = isDark ? '#6b6b8a' : '#666680';
   const grid= isDark ? '#1a1a24' : '#e0e2e8';
   const brd = isDark ? '#2a2a3a' : '#d0d4db';
 
   lwChart = LightweightCharts.createChart(wrap, {
-    width: wrap.clientWidth,
-    height: wrap.clientHeight || 420,
+    width: w,
+    height: h,
     layout: { background:{color:bg}, textColor:txt },
     grid: { vertLines:{color:grid}, horzLines:{color:grid} },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
@@ -1863,11 +1866,14 @@ function lwChangeTF(tf, btn) {
 // ── BOOT ─────────────────────────────────────────────────────
 function lwStart() {
   if (typeof LightweightCharts === 'undefined') { setTimeout(lwStart, 300); return; }
-  lwInitChart();
-  lwLoadKlines(lwSymbol, lwTF);
-  lwStartWS(lwSymbol, lwTF);
-  lwFetchBingXPositions();
-  setInterval(lwFetchBingXPositions, 10000); // Refresh positions every 10s
+  // Wait for panel to be fully visible before measuring dimensions
+  setTimeout(()=>{
+    lwInitChart();
+    lwLoadKlines(lwSymbol, lwTF);
+    lwStartWS(lwSymbol, lwTF);
+    lwFetchBingXPositions();
+    setInterval(lwFetchBingXPositions, 10000);
+  }, 100);
 }
 
 function changeChart() {}
@@ -1991,7 +1997,16 @@ function showPanel(name, btn) {
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   btn.classList.add('active');
-  if (name === 'charts') { lwDrawTradeLevels(); }
+  if (name === 'charts') {
+    setTimeout(()=>{
+      if (!lwChart) { lwStart(); }
+      else {
+        const wrap = document.getElementById('lw-chart-wrap');
+        if (wrap) lwChart.applyOptions({width: Math.max(wrap.clientWidth,600), height: 500});
+        lwDrawAllLevels();
+      }
+    }, 150);
+  }
 }
 
 // ── RULES ─────────────────────────────────────────────────
