@@ -190,8 +190,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
 .ctab{background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:11px;font-family:var(--font);color:var(--muted);cursor:pointer;transition:all .15s;}
 .ctab:hover{color:var(--text);}
 .ctab.active{border-color:var(--yellow);color:var(--yellow);}
-.tv-container{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;height:calc(100vh - 200px);}
-#tv-widget{width:100%;height:100%;}
+.lw-container{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.lw-topbar{background:var(--s2);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.lw-tf-btn{background:var(--s1);border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:10px;font-family:var(--font);color:var(--muted);cursor:pointer;}
+.lw-tf-btn.active{background:var(--yellow);color:#0a0a0f;border-color:var(--yellow);font-weight:700;}
+#lw-chart-wrap{width:100%;height:calc(100vh - 310px);min-height:400px;position:relative;}
+.lw-bottombar{background:var(--s2);border-top:1px solid var(--border);padding:6px 12px;display:flex;align-items:center;gap:14px;}
+.lw-ohlc{font-size:10px;color:var(--muted);}
+.lw-ohlc span{font-weight:700;}
+.lw-ws-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block;}
+.lw-ws-dot.live{background:var(--green);}
+.lw-ws-dot.error{background:var(--red);}
 
 /* RULES */
 .rules-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -357,7 +366,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
           <div class="price-item"><div class="price-dot" style="background:#e67e22"></div><div class="price-sym" style="color:#e67e22">GOLD</div><div class="price-val" id="p-gold">—</div><div class="price-chg" id="c-gold">—</div></div>
         </div>
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--s2);font-size:9px;color:var(--muted);text-align:center;">
-          <span id="price-api-label">WebSocket · Realtime · Binance</span>
+          <span id="price-api-label">Auto-refresh every 15s · Binance API</span>
         </div>
       </div>
     </div>
@@ -543,38 +552,96 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
     </div>
     <div id="alert-list" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;"></div>
   </div>
-  <div class="chart-tabs" id="chart-tab-row">
-    <button class="ctab active" onclick="changeChart('ETHUSDT',this)">ETH</button>
-    <button class="ctab" onclick="changeChart('BTCUSDT',this)">BTC</button>
-    <button class="ctab" onclick="changeChart('SOLUSDT',this)">SOL</button>
-    <button class="ctab" onclick="changeChart('BNBUSDT',this)">BNB</button>
-    <button class="ctab" onclick="changeChart('XRPUSDT',this)">XRP</button>
-    <button class="ctab" onclick="changeChart('ADAUSDT',this)">ADA</button>
-    <button class="ctab" onclick="changeChart('DOGEUSDT',this)">DOGE</button>
-    <button class="ctab" onclick="changeChart('AVAXUSDT',this)">AVAX</button>
-    <button class="ctab" onclick="changeChart('DOTUSDT',this)">DOT</button>
-    <button class="ctab" onclick="changeChart('LINKUSDT',this)">LINK</button>
-    <button class="ctab" onclick="changeChart('MATICUSDT',this)">MATIC</button>
-    <button class="ctab" onclick="changeChart('OPUSDT',this)">OP</button>
-    <button class="ctab" onclick="changeChart('ARBUSDT',this)">ARB</button>
-    <button class="ctab" onclick="changeChart('SUIUSDT',this)">SUI</button>
-    <button class="ctab" onclick="changeChart('INJUSDT',this)">INJ</button>
-    <button class="ctab" onclick="changeChart('PEPEUSDT',this)">PEPE</button>
-    <button class="ctab" onclick="changeChart('WIFUSDT',this)">WIF</button>
-    <button class="ctab" onclick="changeChart('TONUSDT',this)">TON</button>
-    <button class="ctab" onclick="changeChart('TAOUSDT',this)">TAO</button>
-    <button class="ctab" onclick="changeChart('ONDOUSDT',this)">ONDO</button>
-    <button class="ctab" onclick="changeChart('HBARUSDT',this)">HBAR</button>
-    <button class="ctab" onclick="changeChart('TRXUSDT',this)">TRX</button>
-    <button class="ctab" onclick="changeChart('SHIBUSDT',this)">SHIB</button>
-    <button class="ctab" onclick="changeChart('ICPUSDT',this)">ICP</button>
-    <button class="ctab" onclick="changeChart('FILUSDT',this)">FIL</button>
-    <button class="ctab" onclick="changeChart('XAUUSD',this,'OANDA')">GOLD</button>
-    <button class="ctab" onclick="changeChart('XAGUSD',this,'OANDA')">SILVER</button>
-    <button class="ctab" onclick="changeChart('USOIL',this,'TVC')">US OIL</button>
-  </div>
-  <div class="tv-container">
-    <div id="tv-widget"></div>
+  <div class="lw-container">
+    <div class="lw-topbar">
+      <div style="display:flex;gap:4px;flex-wrap:wrap;" id="lw-pair-tabs">
+        <span style="font-size:9px;color:var(--muted);align-self:center;margin-right:2px;">CRYPTO</span>
+        <button class="ctab active" onclick="lwChangeSymbol('ETHUSDT',this)">ETH</button>
+        <button class="ctab" onclick="lwChangeSymbol('BTCUSDT',this)">BTC</button>
+        <button class="ctab" onclick="lwChangeSymbol('SOLUSDT',this)">SOL</button>
+        <button class="ctab" onclick="lwChangeSymbol('BNBUSDT',this)">BNB</button>
+        <button class="ctab" onclick="lwChangeSymbol('XRPUSDT',this)">XRP</button>
+        <button class="ctab" onclick="lwChangeSymbol('ADAUSDT',this)">ADA</button>
+        <button class="ctab" onclick="lwChangeSymbol('DOGEUSDT',this)">DOGE</button>
+        <button class="ctab" onclick="lwChangeSymbol('AVAXUSDT',this)">AVAX</button>
+        <button class="ctab" onclick="lwChangeSymbol('DOTUSDT',this)">DOT</button>
+        <button class="ctab" onclick="lwChangeSymbol('LINKUSDT',this)">LINK</button>
+        <button class="ctab" onclick="lwChangeSymbol('MATICUSDT',this)">MATIC</button>
+        <button class="ctab" onclick="lwChangeSymbol('OPUSDT',this)">OP</button>
+        <button class="ctab" onclick="lwChangeSymbol('ARBUSDT',this)">ARB</button>
+        <button class="ctab" onclick="lwChangeSymbol('SUIUSDT',this)">SUI</button>
+        <button class="ctab" onclick="lwChangeSymbol('INJUSDT',this)">INJ</button>
+        <button class="ctab" onclick="lwChangeSymbol('PEPEUSDT',this)">PEPE</button>
+        <button class="ctab" onclick="lwChangeSymbol('WIFUSDT',this)">WIF</button>
+        <button class="ctab" onclick="lwChangeSymbol('TONUSDT',this)">TON</button>
+        <button class="ctab" onclick="lwChangeSymbol('TAOUSDT',this)">TAO</button>
+        <button class="ctab" onclick="lwChangeSymbol('ONDOUSDT',this)">ONDO</button>
+        <button class="ctab" onclick="lwChangeSymbol('HBARUSDT',this)">HBAR</button>
+        <button class="ctab" onclick="lwChangeSymbol('TRXUSDT',this)">TRX</button>
+        <button class="ctab" onclick="lwChangeSymbol('SHIBUSDT',this)">SHIB</button>
+        <button class="ctab" onclick="lwChangeSymbol('ICPUSDT',this)">ICP</button>
+        <button class="ctab" onclick="lwChangeSymbol('FILUSDT',this)">FIL</button>
+        <button class="ctab" onclick="lwChangeSymbol('LTCUSDT',this)">LTC</button>
+        <button class="ctab" onclick="lwChangeSymbol('NEARUSDT',this)">NEAR</button>
+        <button class="ctab" onclick="lwChangeSymbol('APTUSDT',this)">APT</button>
+        <button class="ctab" onclick="lwChangeSymbol('ATOMUSDT',this)">ATOM</button>
+        <button class="ctab" onclick="lwChangeSymbol('UNIUSDT',this)">UNI</button>
+        <button class="ctab" onclick="lwChangeSymbol('STXUSDT',this)">STX</button>
+        <button class="ctab" onclick="lwChangeSymbol('FTMUSDT',this)">FTM</button>
+        <button class="ctab" onclick="lwChangeSymbol('AAVEUSDT',this)">AAVE</button>
+        <button class="ctab" onclick="lwChangeSymbol('MKRUSDT',this)">MKR</button>
+        <button class="ctab" onclick="lwChangeSymbol('RUNEUSDT',this)">RUNE</button>
+        <button class="ctab" onclick="lwChangeSymbol('GRTUSDT',this)">GRT</button>
+        <button class="ctab" onclick="lwChangeSymbol('RENDERUSDT',this)">RENDER</button>
+        <button class="ctab" onclick="lwChangeSymbol('FETUSDT',this)">FET</button>
+        <button class="ctab" onclick="lwChangeSymbol('WLDUSDT',this)">WLD</button>
+        <button class="ctab" onclick="lwChangeSymbol('EIGENUSDT',this)">EIGEN</button>
+        <span style="font-size:9px;color:var(--muted);align-self:center;margin-left:6px;margin-right:2px;">COMMODITIES</span>
+        <button class="ctab" onclick="lwChangeSymbol('GOLD-USDT',this)" style="color:var(--yellow);">GOLD</button>
+        <button class="ctab" onclick="lwChangeSymbol('SILVER-USDT',this)" style="color:#aaa;">SILVER</button>
+        <button class="ctab" onclick="lwChangeSymbol('OIL-USDT',this)" style="color:#f97316;">OIL</button>
+      </div>
+    </div>
+    <div style="background:var(--s2);border-bottom:1px solid var(--border);padding:6px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div style="display:flex;gap:4px;">
+        <button class="lw-tf-btn" onclick="lwChangeTF('1m',this)">1m</button>
+        <button class="lw-tf-btn" onclick="lwChangeTF('3m',this)">3m</button>
+        <button class="lw-tf-btn active" onclick="lwChangeTF('5m',this)">5m</button>
+        <button class="lw-tf-btn" onclick="lwChangeTF('15m',this)">15m</button>
+        <button class="lw-tf-btn" onclick="lwChangeTF('30m',this)">30m</button>
+        <button class="lw-tf-btn" onclick="lwChangeTF('1h',this)">1H</button>
+        <button class="lw-tf-btn" onclick="lwChangeTF('2h',this)">2H</button>
+        <button class="lw-tf-btn" onclick="lwChangeTF('4h',this)">4H</button>
+        <button class="lw-tf-btn" onclick="lwChangeTF('1d',this)">1D</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-left:8px;">
+        <span style="font-size:10px;color:#4d9fff;">— EMA9</span>
+        <span style="font-size:10px;color:var(--yellow);">— EMA21</span>
+        <span style="font-size:10px;color:#a78bfa;">— EMA50</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+        <div id="lw-price-display" style="font-size:16px;font-weight:700;color:var(--yellow);font-family:var(--font);">--</div>
+        <div id="lw-chg-display" style="font-size:10px;color:var(--muted);">--</div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <div class="lw-ws-dot" id="lw-ws-dot"></div>
+          <span id="lw-ws-label" style="font-size:9px;color:var(--muted);">Connecting</span>
+        </div>
+      </div>
+    </div>
+    <div id="lw-chart-wrap"></div>
+    <div class="lw-bottombar">
+      <div class="lw-ohlc">O <span id="lw-o">--</span></div>
+      <div class="lw-ohlc">H <span id="lw-h" style="color:var(--green);">--</span></div>
+      <div class="lw-ohlc">L <span id="lw-l" style="color:var(--red);">--</span></div>
+      <div class="lw-ohlc">C <span id="lw-c" style="color:var(--yellow);">--</span></div>
+      <div class="lw-ohlc">VOL <span id="lw-vol" style="color:var(--blue);">--</span></div>
+      <div id="lw-trade-info" style="margin-left:8px;font-size:10px;color:var(--muted);"></div>
+      <div style="margin-left:auto;font-size:9px;color:var(--border2);">Binance WS · Realtime</div>
+    </div>
+    <div style="background:var(--s2);border-top:1px solid var(--border);padding:5px 12px;font-size:10px;">
+      <span style="color:var(--muted);margin-right:8px;">BINGX POSITIONS:</span>
+      <span id="lw-bingx-pos" style="color:var(--muted);">Loading...</span>
+    </div>
   </div>
 </div>
 
@@ -765,14 +832,8 @@ window.onload = async () => {
   setToday();
   showSyncing();
   await loadData();
-  // Start WebSocket for realtime prices
-  fetch24hrChange();
-  startPriceWebSocket();
-  fetchGold();
   fetchPrices();
-  // Refresh 24hr change % and gold every 60s
-  setInterval(fetch24hrChange, 60000);
-  setInterval(fetchGold, 60000);
+  setInterval(fetchPrices, 8000);
   initTheme();
   renderAlerts();
   // Request notification permission on load
@@ -781,7 +842,7 @@ window.onload = async () => {
   }
   setInterval(updateOpenTradePnl, 3000);
   renderAll();
-  loadTVChart('ETHUSDT');
+  lwStart();
   // Auto-import from BingX every 30 seconds
   autoImportBingX();
   setInterval(autoImportBingX, 30000);
@@ -1387,168 +1448,431 @@ function renderAnalytics() {
   document.getElementById('ana-pairs').innerHTML = pairsHtml || '<div style="color:var(--muted);font-size:12px;">No data</div>';
 }
 
-// ── LIVE PRICES — WebSocket (realtime, zero lag) ───────────
-// Stores 24hr change % from REST snapshot (updated every 60s)
-const pct24h = {BTC:0, ETH:0, SOL:0};
-
-// Fetch 24hr change % once on load, refresh every 60s
-async function fetch24hrChange() {
+// ── LIVE PRICES ────────────────────────────────────────────
+async function fetchPrices() {
+  // Use Binance directly - most reliable, no CORS issues
   const pairs = [
-    {symbol:'BTCUSDT', key:'BTC'},
-    {symbol:'ETHUSDT', key:'ETH'},
-    {symbol:'SOLUSDT', key:'SOL'}
+    {symbol:'BTCUSDT', elId:'btc', isBTC:true},
+    {symbol:'ETHUSDT', elId:'eth', isBTC:false},
+    {symbol:'SOLUSDT', elId:'sol', isBTC:false}
   ];
   try {
     const results = await Promise.all(
       pairs.map(p => fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${p.symbol}`).then(r=>r.json()))
     );
     results.forEach((data, i) => {
-      pct24h[pairs[i].key] = parseFloat(data.priceChangePercent)||0;
+      const {elId, isBTC} = pairs[i];
+      const price = parseFloat(data.lastPrice);
+      const chg = parseFloat(data.priceChangePercent);
+      const sym = pairs[i].symbol.replace('USDT','');
+      prices[sym] = price;
+      const priceEl = document.getElementById(`p-${elId}`);
+      const chgEl = document.getElementById(`c-${elId}`);
+      if (priceEl) priceEl.textContent = '$'+price.toLocaleString(undefined,{minimumFractionDigits:isBTC?0:2,maximumFractionDigits:isBTC?0:2});
+      if (chgEl) {
+        chgEl.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%';
+        chgEl.className = 'price-chg '+(chg>=0?'up':'dn');
+      }
     });
+    // GOLD via multiple fallback APIs
+    try {
+      // Try gold-api.com first
+      const goldRes = await fetch('https://api.gold-api.com/price/XAU');
+      const goldData = await goldRes.json();
+      const goldPrice = goldData?.price || goldData?.regularMarketPrice;
+      if (goldPrice) {
+        const priceEl = document.getElementById('p-gold');
+        const chgEl = document.getElementById('c-gold');
+        if (priceEl) priceEl.textContent = '$'+parseFloat(goldPrice).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+        if (chgEl) { 
+          const chgPct = goldData?.chp || goldData?.ch || 0;
+          chgEl.textContent = (chgPct>=0?'+':'')+parseFloat(chgPct).toFixed(2)+'%';
+          chgEl.className = 'price-chg '+(chgPct>=0?'up':'dn');
+        }
+      }
+    } catch(eg) {
+      // Fallback: show static label
+      const priceEl = document.getElementById('p-gold');
+      if (priceEl && priceEl.textContent === '—') {
+        priceEl.textContent = 'N/A';
+      }
+    }
+    document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
+    document.getElementById('price-api-label').textContent = 'Auto-refresh every 15s · Binance API';
+    renderOpenTrade();
+  } catch(e) {
+    console.log('Price fetch failed:', e);
+  }
+}
+
+// ── CHART ENGINE — BingX + Binance WebSocket ───────────────
+const BINGX_KEY    = 'BQhMAcjlO9r2MmEChEaPsArhEB7gTFPbFIQ0YDYOPP1b08GujqTyW1g4JUkXL0O77yZaxtARXPEZPilAKXhvMQ';
+const BINGX_SECRET = 'q5uxhqBTPmUi9wCgsn0o99aGbcoYVYzjrjEeiFs6xZBUYb0zQjD98fANpFvDQsx7b0wg6E7MaCH4uUjGwzJg';
+
+// Symbol map: chart symbol → BingX perpetual symbol
+const BINGX_SYM = {
+  'ETHUSDT':'ETH-USDT','BTCUSDT':'BTC-USDT','SOLUSDT':'SOL-USDT',
+  'BNBUSDT':'BNB-USDT','XRPUSDT':'XRP-USDT','ADAUSDT':'ADA-USDT',
+  'DOGEUSDT':'DOGE-USDT','AVAXUSDT':'AVAX-USDT','DOTUSDT':'DOT-USDT',
+  'LINKUSDT':'LINK-USDT','MATICUSDT':'MATIC-USDT','OPUSDT':'OP-USDT',
+  'ARBUSDT':'ARB-USDT','SUIUSDT':'SUI-USDT','INJUSDT':'INJ-USDT',
+  'PEPEUSDT':'PEPE-USDT','WIFUSDT':'WIF-USDT','TONUSDT':'TON-USDT',
+  'TAOUSDT':'TAO-USDT','ONDOUSDT':'ONDO-USDT','HBARUSDT':'HBAR-USDT',
+  'TRXUSDT':'TRX-USDT','SHIBUSDT':'SHIB-USDT','ICPUSDT':'ICP-USDT',
+  'FILUSDT':'FIL-USDT','LTCUSDT':'LTC-USDT','NEARUSDT':'NEAR-USDT',
+  'APTUSDT':'APT-USDT','ATOMUSDT':'ATOM-USDT','UNIUSDT':'UNI-USDT',
+  'STXUSDT':'STX-USDT','FTMUSDT':'FTM-USDT','AAVEUSDT':'AAVE-USDT',
+  'MKRUSDT':'MKR-USDT','RUNEUSDT':'RUNE-USDT','GRTUSDT':'GRT-USDT',
+  'RENDERUSDT':'RENDER-USDT','FETUSDT':'FET-USDT','WLDUSDT':'WLD-USDT',
+  'EIGENUSDT':'EIGEN-USDT',
+  'GOLD-USDT':'GOLD-USDT','SILVER-USDT':'SILVER-USDT','OIL-USDT':'OIL-USDT'
+};
+
+let lwChart, lwCandle, lwEma9, lwEma21, lwEma50, lwVolSeries;
+let lwSymbol = 'ETHUSDT', lwTF = '5m', lwWS = null;
+let lwPriceLines = [];
+let lwBingxPositions = [];
+
+const TF_MAP = {'1m':'1m','3m':'3m','5m':'5m','15m':'15m','30m':'30m','1h':'1h','2h':'2h','4h':'4h','1d':'1d'};
+
+function lwDecimalPlaces(sym) {
+  if (sym.startsWith('BTC')) return 0;
+  if (['GOLD-USDT','SILVER-USDT'].includes(sym)) return 2;
+  if (sym.startsWith('SHIB') || sym.startsWith('PEPE')) return 6;
+  return 2;
+}
+function lwFmt(p, sym) {
+  if (p === null || p === undefined || isNaN(p)) return '--';
+  const dp = lwDecimalPlaces(sym || lwSymbol);
+  return '$' + parseFloat(p).toLocaleString(undefined, {minimumFractionDigits:dp, maximumFractionDigits:dp});
+}
+
+// ── CHART INIT ──────────────────────────────────────────────
+function lwInitChart() {
+  const wrap = document.getElementById('lw-chart-wrap');
+  if (!wrap) return;
+  if (lwChart) { try { lwChart.remove(); } catch(e){} lwChart = null; }
+
+  const isDark = !document.body.classList.contains('light-mode');
+  const bg  = isDark ? '#0a0a0f' : '#f0f2f5';
+  const txt = isDark ? '#6b6b8a' : '#666680';
+  const grid= isDark ? '#1a1a24' : '#e0e2e8';
+  const brd = isDark ? '#2a2a3a' : '#d0d4db';
+
+  lwChart = LightweightCharts.createChart(wrap, {
+    width: wrap.clientWidth,
+    height: wrap.clientHeight || 420,
+    layout: { background:{color:bg}, textColor:txt },
+    grid: { vertLines:{color:grid}, horzLines:{color:grid} },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor:brd },
+    timeScale: { borderColor:brd, timeVisible:true, secondsVisible:false, rightOffset:5 },
+    handleScroll: true, handleScale: true,
+  });
+
+  // Candlestick
+  lwCandle = lwChart.addCandlestickSeries({
+    upColor:'#00ff9d', downColor:'#ff3d6b',
+    borderUpColor:'#00ff9d', borderDownColor:'#ff3d6b',
+    wickUpColor:'#00ff9d', wickDownColor:'#ff3d6b',
+  });
+
+  // Volume (separate pane)
+  lwVolSeries = lwChart.addHistogramSeries({
+    priceFormat:{type:'volume'},
+    priceScaleId:'vol',
+    scaleMargins:{top:0.85, bottom:0},
+  });
+  lwChart.priceScale('vol').applyOptions({ scaleMargins:{top:0.85,bottom:0} });
+
+  // EMAs
+  lwEma9  = lwChart.addLineSeries({color:'#4d9fff',lineWidth:1,priceLineVisible:false,lastValueVisible:true,title:'EMA9'});
+  lwEma21 = lwChart.addLineSeries({color:'#ffd060',lineWidth:1,priceLineVisible:false,lastValueVisible:true,title:'EMA21'});
+  lwEma50 = lwChart.addLineSeries({color:'#a78bfa',lineWidth:1,priceLineVisible:false,lastValueVisible:true,title:'EMA50'});
+
+  // Crosshair OHLC update
+  lwChart.subscribeCrosshairMove(param => {
+    if (!param.time || !param.seriesData) return;
+    const d = param.seriesData.get(lwCandle);
+    if (!d) return;
+    document.getElementById('lw-o').textContent = lwFmt(d.open);
+    document.getElementById('lw-h').textContent = lwFmt(d.high);
+    document.getElementById('lw-l').textContent = lwFmt(d.low);
+    document.getElementById('lw-c').textContent = lwFmt(d.close);
+    const v = param.seriesData.get(lwVolSeries);
+    if (v) document.getElementById('lw-vol').textContent = parseFloat(v.value).toLocaleString(undefined,{maximumFractionDigits:0});
+  });
+
+  const ro = new ResizeObserver(() => {
+    if (lwChart && wrap) lwChart.applyOptions({width:wrap.clientWidth, height:wrap.clientHeight||420});
+  });
+  ro.observe(wrap);
+}
+
+// ── EMA CALC ────────────────────────────────────────────────
+function calcEMA(data, period) {
+  const k = 2/(period+1); let ema = data[0].close;
+  return data.map((d,i)=>{
+    ema = i===0 ? d.close : d.close*k + ema*(1-k);
+    return {time:d.time, value:parseFloat(ema.toFixed(6))};
+  });
+}
+
+// ── LOAD KLINES (Binance for crypto, fallback for commodities) ──
+async function lwLoadKlines(symbol, tf) {
+  try {
+    let candles = [];
+    // Commodities: use alternate source
+    if (['GOLD-USDT','SILVER-USDT','OIL-USDT'].includes(symbol)) {
+      candles = await lwLoadCommodity(symbol, tf);
+    } else {
+      // Use Binance klines (most reliable, free, no auth needed)
+      const binSym = symbol.replace('-','');
+      const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${binSym}&interval=${TF_MAP[tf]||'5m'}&limit=300`);
+      const raw = await res.json();
+      if (!Array.isArray(raw)) throw new Error('bad response');
+      candles = raw.map(k=>({
+        time:  Math.floor(k[0]/1000),
+        open:  parseFloat(k[1]),
+        high:  parseFloat(k[2]),
+        low:   parseFloat(k[3]),
+        close: parseFloat(k[4]),
+        volume:parseFloat(k[5])
+      }));
+    }
+    if (!candles.length) return;
+
+    lwCandle.setData(candles);
+    lwVolSeries.setData(candles.map(c=>({
+      time:c.time, value:c.volume,
+      color: c.close>=c.open ? 'rgba(0,255,157,0.35)' : 'rgba(255,61,107,0.35)'
+    })));
+    lwEma9.setData(calcEMA(candles,9));
+    lwEma21.setData(calcEMA(candles,21));
+    lwEma50.setData(calcEMA(candles,50));
+    lwChart.timeScale().fitContent();
+
+    const last = candles[candles.length-1];
+    lwUpdateOHLCV(last);
+    lwFetch24h(symbol);
+    lwDrawAllLevels();
+  } catch(e) { console.log('klines err', e); }
+}
+
+async function lwLoadCommodity(symbol, tf) {
+  // BingX perpetual klines for commodities
+  const bSym = BINGX_SYM[symbol] || symbol;
+  const tfMs = {'1m':60000,'3m':180000,'5m':300000,'15m':900000,'30m':1800000,'1h':3600000,'2h':7200000,'4h':14400000,'1d':86400000};
+  const interval = tfMs[tf] || 300000;
+  try {
+    const res = await fetch(`https://open-api.bingx.com/openApi/swap/v2/quote/klines?symbol=${bSym}&interval=${tf}&limit=200`);
+    const data = await res.json();
+    if (data.code !== 0 || !data.data) return [];
+    return data.data.map(k=>({
+      time:  Math.floor(k.time/1000),
+      open:  parseFloat(k.open),
+      high:  parseFloat(k.high),
+      low:   parseFloat(k.low),
+      close: parseFloat(k.close),
+      volume:parseFloat(k.volume)
+    })).sort((a,b)=>a.time-b.time);
+  } catch(e) { return []; }
+}
+
+function lwUpdateOHLCV(c) {
+  if (!c) return;
+  document.getElementById('lw-o').textContent = lwFmt(c.open);
+  document.getElementById('lw-h').textContent = lwFmt(c.high);
+  document.getElementById('lw-l').textContent = lwFmt(c.low);
+  document.getElementById('lw-c').textContent = lwFmt(c.close);
+  if (c.volume !== undefined)
+    document.getElementById('lw-vol').textContent = parseFloat(c.volume).toLocaleString(undefined,{maximumFractionDigits:0});
+}
+
+// ── 24H TICKER ──────────────────────────────────────────────
+async function lwFetch24h(symbol) {
+  try {
+    let price, chg;
+    if (['GOLD-USDT','SILVER-USDT','OIL-USDT'].includes(symbol)) {
+      const bSym = BINGX_SYM[symbol]||symbol;
+      const res = await fetch(`https://open-api.bingx.com/openApi/swap/v2/quote/ticker?symbol=${bSym}`);
+      const d   = await res.json();
+      if (d.code===0 && d.data) {
+        price = parseFloat(d.data.lastPrice);
+        chg   = parseFloat(d.data.priceChangePercent);
+      }
+    } else {
+      const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol.replace('-','')}`);
+      const d   = await res.json();
+      price = parseFloat(d.lastPrice);
+      chg   = parseFloat(d.priceChangePercent);
+    }
+    if (!price) return;
+    document.getElementById('lw-price-display').textContent = lwFmt(price, symbol);
+    const el = document.getElementById('lw-chg-display');
+    el.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%';
+    el.style.color = chg>=0?'var(--green)':'var(--red)';
   } catch(e) {}
 }
 
-// Update a single price element instantly
-function updatePriceEl(elId, price, isBTC) {
-  const priceEl = document.getElementById(`p-${elId}`);
-  const chgEl   = document.getElementById(`c-${elId}`);
-  const key      = elId.toUpperCase();
-  const chg      = pct24h[key] || 0;
-  if (priceEl) {
-    priceEl.textContent = '$'+price.toLocaleString(undefined,{
-      minimumFractionDigits: isBTC?0:2,
-      maximumFractionDigits: isBTC?0:2
-    });
-    // Flash green/red on update
-    priceEl.style.transition = 'color 0.15s';
-    priceEl.style.color = 'var(--yellow)';
-    setTimeout(()=>{ priceEl.style.color = ''; }, 200);
-  }
-  if (chgEl) {
-    chgEl.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%';
-    chgEl.className = 'price-chg '+(chg>=0?'up':'dn');
-  }
-}
-
-// Start Binance WebSocket — streams BTC, ETH, SOL tick by tick
-let wsInstance = null;
-function startPriceWebSocket() {
-  if (wsInstance) { try { wsInstance.close(); } catch(e){} }
-
-  const streams = 'btcusdt@aggTrade/ethusdt@aggTrade/solusdt@aggTrade';
-  const ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`);
-  wsInstance = ws;
-
-  ws.onopen = () => {
-    const dot = document.getElementById('sync-dot');
-    if (dot) { dot.className = 'sync-dot live'; }
-    document.getElementById('price-api-label').textContent = 'WebSocket · Realtime · Binance';
-    document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
-  };
-
-  ws.onmessage = (event) => {
-    try {
-      const msg  = JSON.parse(event.data);
-      const data = msg.data;
-      const sym  = data.s; // e.g. BTCUSDT
-      const price = parseFloat(data.p);
-
-      if (sym === 'BTCUSDT') {
-        prices['BTC'] = price;
-        updatePriceEl('btc', price, true);
-      } else if (sym === 'ETHUSDT') {
-        prices['ETH'] = price;
-        updatePriceEl('eth', price, false);
-      } else if (sym === 'SOLUSDT') {
-        prices['SOL'] = price;
-        updatePriceEl('sol', price, false);
-      }
-
-      // Update time & open trade PnL on every tick
-      document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
-      renderOpenTrade();
-    } catch(e) {}
-  };
-
-  ws.onerror = () => {
-    const dot = document.getElementById('sync-dot');
-    if (dot) dot.className = 'sync-dot error';
-  };
-
-  ws.onclose = () => {
-    // Auto-reconnect after 3 seconds
-    const dot = document.getElementById('sync-dot');
-    if (dot) dot.className = 'sync-dot error';
-    document.getElementById('price-api-label').textContent = 'Reconnecting...';
-    setTimeout(startPriceWebSocket, 3000);
-  };
-}
-
-// Fetch gold price (REST, no WebSocket available) every 60s
-async function fetchGold() {
+// ── BINGX OPEN POSITIONS ────────────────────────────────────
+async function lwFetchBingXPositions() {
   try {
-    const goldRes  = await fetch('https://api.gold-api.com/price/XAU');
-    const goldData = await goldRes.json();
-    const goldPrice = goldData?.price || goldData?.regularMarketPrice;
-    if (goldPrice) {
-      const priceEl = document.getElementById('p-gold');
-      const chgEl   = document.getElementById('c-gold');
-      if (priceEl) priceEl.textContent = '$'+parseFloat(goldPrice).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-      if (chgEl) {
-        const chgPct = goldData?.chp || goldData?.ch || 0;
-        chgEl.textContent = (chgPct>=0?'+':'')+parseFloat(chgPct).toFixed(2)+'%';
-        chgEl.className = 'price-chg '+(chgPct>=0?'up':'dn');
-      }
+    const ts   = Date.now();
+    const query= `timestamp=${ts}`;
+    // HMAC-SHA256 signature
+    const enc  = new TextEncoder();
+    const keyData = enc.encode(BINGX_SECRET);
+    const msgData = enc.encode(query);
+    const cryptoKey = await crypto.subtle.importKey('raw',keyData,{name:'HMAC',hash:'SHA-256'},false,['sign']);
+    const sig  = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
+    const sigHex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
+
+    const res  = await fetch(`https://open-api.bingx.com/openApi/swap/v2/user/positions?${query}&signature=${sigHex}`,{
+      headers:{'X-BX-APIKEY': BINGX_KEY}
+    });
+    const data = await res.json();
+    if (data.code===0 && data.data) {
+      lwBingxPositions = data.data.filter(p=>parseFloat(p.positionAmt)!==0);
+      lwDrawAllLevels();
+      lwUpdatePositionBadge();
     }
-  } catch(eg) {
-    const priceEl = document.getElementById('p-gold');
-    if (priceEl && priceEl.textContent === '—') priceEl.textContent = 'N/A';
+  } catch(e) { console.log('BingX pos err',e); }
+}
+
+function lwUpdatePositionBadge() {
+  const el = document.getElementById('lw-bingx-pos');
+  if (!el) return;
+  if (!lwBingxPositions.length) { el.textContent='No open positions'; el.style.color='var(--muted)'; return; }
+  const parts = lwBingxPositions.map(p=>{
+    const sym  = p.symbol.replace('-USDT','');
+    const side = parseFloat(p.positionAmt)>0 ? '▲' : '▼';
+    const pnl  = parseFloat(p.unrealizedProfit||0);
+    const pnlColor = pnl>=0?'#00ff9d':'#ff3d6b';
+    return `<span style="margin-right:10px">${side} ${sym} <span style="color:${pnlColor}">${pnl>=0?'+':''}$${pnl.toFixed(2)}</span></span>`;
+  });
+  el.innerHTML = parts.join('');
+}
+
+// ── DRAW LEVELS ON CHART ────────────────────────────────────
+function lwDrawAllLevels() {
+  // Clear all existing price lines
+  lwPriceLines.forEach(l=>{ try{ lwCandle.removePriceLine(l); }catch(e){} });
+  lwPriceLines = [];
+
+  // 1. Draw from app's open trade log
+  const openTrade = allTrades.find(t => !t.exit || t.result==='Open');
+  if (openTrade) {
+    const tradeSym = (openTrade.pair||'').replace('/','').replace('.P','').toUpperCase()+'USDT';
+    if (lwSymbol===tradeSym || lwSymbol.startsWith(tradeSym.replace('USDT',''))) {
+      const add = (price, color, title, width, style) => {
+        if (!price || isNaN(price)) return;
+        const l = lwCandle.createPriceLine({price, color, lineWidth:width||1, lineStyle:style||0, axisLabelVisible:true, title});
+        lwPriceLines.push(l);
+      };
+      add(parseFloat(openTrade.entry), '#ffd060', 'ENTRY', 2, 0);
+      add(parseFloat(openTrade.sl),    '#ff3d6b', 'SL',    1, 1);
+      add(parseFloat(openTrade.tp1),   '#00ff9d', 'TP1',   1, 1);
+      add(parseFloat(openTrade.tp2),   '#00ff9d', 'TP2',   2, 0);
+    }
+  }
+
+  // 2. Draw from BingX live positions
+  lwBingxPositions.forEach(pos => {
+    const posSym = pos.symbol.replace('-','')+'T'; // e.g. ETH-USDT → ETHUSDT + T = ETHUSDT... handle properly
+    const cleanSym = pos.symbol.replace('-USDT','')+'USDT';
+    if (lwSymbol !== cleanSym) return;
+    const entry = parseFloat(pos.avgPrice||pos.entryPrice);
+    const liq   = parseFloat(pos.liquidationPrice);
+    const isLong = parseFloat(pos.positionAmt)>0;
+    if (entry) {
+      const l = lwCandle.createPriceLine({price:entry, color:'#ffd060', lineWidth:2, lineStyle:0, axisLabelVisible:true, title:`BINGX ${isLong?'LONG':'SHORT'}`});
+      lwPriceLines.push(l);
+    }
+    if (liq) {
+      const l = lwCandle.createPriceLine({price:liq, color:'#ff3d6b', lineWidth:1, lineStyle:3, axisLabelVisible:true, title:'LIQ'});
+      lwPriceLines.push(l);
+    }
+  });
+
+  // Update trade info bar
+  const infoEl = document.getElementById('lw-trade-info');
+  if (!infoEl) return;
+  const matchPos = lwBingxPositions.find(p=>lwSymbol===p.symbol.replace('-USDT','')+'USDT');
+  if (matchPos) {
+    const pnl  = parseFloat(matchPos.unrealizedProfit||0);
+    const side = parseFloat(matchPos.positionAmt)>0 ? 'LONG' : 'SHORT';
+    infoEl.innerHTML = `<span style="color:var(--yellow)">BINGX LIVE</span> · <span style="color:${side==='LONG'?'var(--green)':'var(--red)'}">${side}</span> · Entry: ${lwFmt(parseFloat(matchPos.avgPrice||matchPos.entryPrice))} · PnL: <span style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}$${pnl.toFixed(2)}</span>`;
+  } else if (openTrade && (!openTrade.exit || openTrade.result==='Open')) {
+    infoEl.innerHTML = `<span style="color:var(--yellow)">OPEN TRADE</span> · <span style="color:${openTrade.direction==='Long'?'var(--green)':'var(--red)'}">${openTrade.direction}</span> · Entry: ${lwFmt(parseFloat(openTrade.entry))}`;
+  } else {
+    infoEl.textContent = '';
   }
 }
 
-// fetchPrices kept as manual refresh fallback (refresh button)
-async function fetchPrices() {
-  await fetch24hrChange();
-  await fetchGold();
-  // WebSocket handles crypto prices — just update time
-  document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
+// ── WEBSOCKET ───────────────────────────────────────────────
+function lwStartWS(symbol, tf) {
+  if (lwWS) { try{ lwWS.close(); }catch(e){} lwWS=null; }
+  // Use Binance WS for crypto (most stable)
+  if (['GOLD-USDT','SILVER-USDT','OIL-USDT'].includes(symbol)) {
+    // Poll every 3s for commodities (BingX WS needs auth)
+    lwWS = { _poll: setInterval(()=>lwLoadKlines(symbol,tf), 3000), close(){ clearInterval(this._poll); } };
+    return;
+  }
+  const binSym = symbol.replace('-','').toLowerCase();
+  const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${binSym}@kline_${TF_MAP[tf]||'5m'}`);
+  lwWS = ws;
+  ws.onopen = ()=>{
+    document.getElementById('lw-ws-dot').className='lw-ws-dot live';
+    document.getElementById('lw-ws-label').textContent='Live';
+  };
+  ws.onmessage = (e)=>{
+    const k = JSON.parse(e.data).k;
+    const c = { time:Math.floor(k.t/1000), open:parseFloat(k.o), high:parseFloat(k.h), low:parseFloat(k.l), close:parseFloat(k.c) };
+    lwCandle.update(c);
+    lwVolSeries.update({ time:c.time, value:parseFloat(k.v), color:c.close>=c.open?'rgba(0,255,157,0.35)':'rgba(255,61,107,0.35)' });
+    document.getElementById('lw-price-display').textContent = lwFmt(c.close, symbol);
+    document.getElementById('lw-c').textContent = lwFmt(c.close);
+    document.getElementById('lw-h').textContent = lwFmt(c.high);
+    document.getElementById('lw-l').textContent = lwFmt(c.low);
+    if (k.x) { lwLoadKlines(symbol,tf); } // Candle closed — reload for fresh EMAs
+  };
+  ws.onerror = ()=>{ document.getElementById('lw-ws-dot').className='lw-ws-dot error'; document.getElementById('lw-ws-label').textContent='Error'; };
+  ws.onclose = ()=>{
+    document.getElementById('lw-ws-dot').className='lw-ws-dot error';
+    document.getElementById('lw-ws-label').textContent='Reconnecting...';
+    setTimeout(()=>lwStartWS(symbol,tf), 2000);
+  };
 }
 
-// ── TV CHART ──────────────────────────────────────────────
-function loadTVChart(symbol, exchange) {
-  currentSymbol = symbol;
-  document.getElementById('tv-widget').innerHTML = '';
-  const script = document.createElement('script');
-  script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
-  script.async = true;
-  let tvSymbol;
-  if (exchange === 'OANDA') tvSymbol = `OANDA:${symbol}`;
-  else if (exchange === 'TVC') tvSymbol = `TVC:${symbol}`;
-  else tvSymbol = `BINANCE:${symbol}`;
-  script.innerHTML = JSON.stringify({
-    autosize: true,
-    symbol: tvSymbol,
-    interval: '5',
-    timezone: 'Asia/Kolkata',
-    theme: document.body.classList.contains('light-mode') ? 'light' : 'dark',
-    style: '1',
-    locale: 'en',
-    enable_publishing: false,
-    backgroundColor: document.body.classList.contains('light-mode') ? '#f0f2f5' : '#0a0a0f',
-    gridColor: 'rgba(42,42,58,0.5)',
-    hide_top_toolbar: false,
-    hide_legend: false,
-    save_image: false,
-    container_id: 'tv-widget'
-  });
-  document.getElementById('tv-widget').appendChild(script);
+// ── CONTROLS ─────────────────────────────────────────────────
+function lwChangeSymbol(sym, btn) {
+  lwSymbol = sym;
+  document.querySelectorAll('#lw-pair-tabs .ctab').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  lwLoadKlines(sym, lwTF);
+  lwStartWS(sym, lwTF);
+}
+function lwChangeTF(tf, btn) {
+  lwTF = tf;
+  document.querySelectorAll('.lw-tf-btn').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  lwLoadKlines(lwSymbol, tf);
+  lwStartWS(lwSymbol, tf);
 }
 
-function changeChart(symbol, btn, exchange) {
-  document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  loadTVChart(symbol, exchange);
+// ── BOOT ─────────────────────────────────────────────────────
+function lwStart() {
+  if (typeof LightweightCharts === 'undefined') { setTimeout(lwStart, 300); return; }
+  lwInitChart();
+  lwLoadKlines(lwSymbol, lwTF);
+  lwStartWS(lwSymbol, lwTF);
+  lwFetchBingXPositions();
+  setInterval(lwFetchBingXPositions, 10000); // Refresh positions every 10s
 }
+
+function changeChart() {}
+function loadTVChart() {}
 
 // ── MODAL ─────────────────────────────────────────────────
 function openModal() {
@@ -1668,7 +1992,7 @@ function showPanel(name, btn) {
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   btn.classList.add('active');
-  if (name === 'charts') loadTVChart(currentSymbol);
+  if (name === 'charts') { lwDrawTradeLevels(); }
 }
 
 // ── RULES ─────────────────────────────────────────────────
@@ -1693,7 +2017,8 @@ function toggleTheme() {
   document.getElementById('theme-btn').textContent = isLight ? '☀️' : '🌙';
   localStorage.setItem('vj_theme', isLight ? 'light' : 'dark');
   // Reload chart with new theme
-  loadTVChart(currentSymbol);
+  lwInitChart();
+  lwLoadKlines(lwSymbol, lwTF);
 }
 
 function initTheme() {
@@ -1919,5 +2244,6 @@ function showToast(msg, type='success') {
   setTimeout(()=>t.classList.remove('show'), 3000);
 }
 </script>
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 </body>
 </html>
