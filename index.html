@@ -769,7 +769,7 @@ window.onload = async () => {
   _fetch24h();
   _startPriceWS();
   _fetchGold();
-  setInterval(_fetchGold, 60000);
+  setInterval(_fetchGold, 30000); // Gold refresh every 30s
   setInterval(_fetch24h, 60000);
   fetchPrices();
   initTheme();
@@ -1402,37 +1402,57 @@ function _updatePriceTile(elId, price, isBTC, sym) {
 let _priceWS = null;
 function _startPriceWS() {
   if (_priceWS) { try{_priceWS.close();}catch(e){} }
-  const ws = new WebSocket('wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/ethusdt@aggTrade/solusdt@aggTrade');
+  // @ticker stream: fires every 1s with last price + 24h change — zero lag
+  const ws = new WebSocket('wss://stream.binance.com:9443/stream?streams=btcusdt@ticker/ethusdt@ticker/solusdt@ticker');
   _priceWS = ws;
   ws.onopen = () => {
     const d = document.getElementById('sync-dot');
     if (d) d.className = 'sync-dot live';
     document.getElementById('price-api-label').textContent = 'WebSocket · Realtime · Binance';
   };
-  ws.onmessage = (e) => {
+  ws.onmessage = (ev) => {
     try {
-      const msg = JSON.parse(e.data);
-      const sym = msg.data.s;
-      const price = parseFloat(msg.data.p);
-      if (sym==='BTCUSDT') { prices['BTC']=price; _updatePriceTile('btc',price,true,'BTC'); }
-      else if (sym==='ETHUSDT') { prices['ETH']=price; _updatePriceTile('eth',price,false,'ETH'); }
-      else if (sym==='SOLUSDT') { prices['SOL']=price; _updatePriceTile('sol',price,false,'SOL'); }
+      const msg = JSON.parse(ev.data);
+      const d = msg.data;
+      const sym = d.s;
+      const price = parseFloat(d.c); // last price — most accurate realtime
+      const pct   = parseFloat(d.P); // 24h change % — live from same stream
+      if (sym==='BTCUSDT') { prices['BTC']=price; _pct24.BTC=pct; _updatePriceTile('btc',price,true,'BTC'); }
+      else if (sym==='ETHUSDT') { prices['ETH']=price; _pct24.ETH=pct; _updatePriceTile('eth',price,false,'ETH'); }
+      else if (sym==='SOLUSDT') { prices['SOL']=price; _pct24.SOL=pct; _updatePriceTile('sol',price,false,'SOL'); }
       document.getElementById('price-time').textContent = new Date().toLocaleTimeString('en-IN');
       renderOpenTrade();
     } catch(e){}
   };
-  ws.onclose = () => { setTimeout(_startPriceWS, 3000); };
+  ws.onclose = () => { setTimeout(_startPriceWS, 2000); };
   ws.onerror = () => { ws.close(); };
 }
 
 async function _fetchGold() {
   try {
-    const r = await fetch('https://api.gold-api.com/price/XAU');
+    // Primary: metals-api with 30s refresh
+    const r = await fetch('https://api.metals.live/v1/spot/gold');
     const d = await r.json();
-    const p = d?.price||d?.regularMarketPrice;
+    const p = Array.isArray(d) ? d[0]?.price : d?.price;
     if (p) {
-      const el=document.getElementById('p-gold'); if(el) el.textContent='$'+parseFloat(p).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-      const ce=document.getElementById('c-gold'); if(ce){ const chg=d?.chp||d?.ch||0; ce.textContent=(chg>=0?'+':'')+parseFloat(chg).toFixed(2)+'%'; ce.className='price-chg '+(chg>=0?'up':'dn'); }
+      const el=document.getElementById('p-gold');
+      if(el) el.textContent='$'+parseFloat(p).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+      const ce=document.getElementById('c-gold');
+      if(ce){ ce.textContent='GOLD'; ce.className='price-chg'; }
+      return;
+    }
+  } catch(e){}
+  try {
+    // Fallback: gold-api
+    const r2 = await fetch('https://api.gold-api.com/price/XAU');
+    const d2 = await r2.json();
+    const p2 = d2?.price||d2?.regularMarketPrice;
+    if (p2) {
+      const el=document.getElementById('p-gold');
+      if(el) el.textContent='$'+parseFloat(p2).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+      const chg=d2?.chp||d2?.ch||0;
+      const ce=document.getElementById('c-gold');
+      if(ce){ ce.textContent=(chg>=0?'+':'')+parseFloat(chg).toFixed(2)+'%'; ce.className='price-chg '+(chg>=0?'up':'dn'); }
     }
   } catch(e){}
 }
@@ -1444,24 +1464,46 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4xvjR0TnMMwkY
 
 async function _fetchBingXPositions() {
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getBingXPositions`);
-    const data = await res.json();
+    // Apps Script proxy — bypasses CORS, keys stay secure in Sheet
+    const proxyUrl = APPS_SCRIPT_URL + '?action=getBingXPositions&t=' + Date.now();
+    const res = await fetch(proxyUrl, { redirect: 'follow' });
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch(e) {
+      console.warn('BingX: bad JSON response', text.slice(0,200));
+      _showBingXStatus('error');
+      return;
+    }
     if (data.code === 0 && data.data) {
       const active = data.data.filter(p => parseFloat(p.positionAmt || 0) !== 0);
       _renderBingXPositions(active);
-      // Update prices map with BingX live mark prices
       active.forEach(p => {
-        const sym = p.symbol.replace('-USDT', '');
+        const sym = p.symbol.replace('-USDT','').replace('_USDT','');
         const livePrice = parseFloat(p.markPrice || p.entryPrice || 0);
         if (livePrice && sym) prices[sym] = livePrice;
       });
       if (active.length) renderOpenTrade();
-    } else if (data.code !== 0) {
-      console.warn('BingX Positions:', data.msg || 'No data');
+    } else {
+      console.warn('BingX Positions:', data.msg || 'No positions / API error');
+      _showBingXStatus(data.msg || 'no_pos');
     }
   } catch(e) {
     console.warn('BingX position fetch failed:', e);
+    _showBingXStatus('fetch_error');
   }
+}
+
+function _showBingXStatus(msg) {
+  let bar = document.getElementById('bx-pos-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'bx-pos-bar';
+    bar.style.cssText = 'background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:10px;margin-bottom:12px;color:var(--muted);';
+    const openCard = document.getElementById('open-trade-card');
+    if (openCard && openCard.parentNode) openCard.parentNode.insertBefore(bar, openCard);
+  }
+  if (msg === 'no_pos') bar.innerHTML = '<span style="color:var(--muted)">🔴 BINGX — No open positions</span>';
+  else bar.innerHTML = '<span style="color:var(--red)">⚠️ BINGX — ' + msg + '</span>';
 }
 
 function _renderBingXPositions(positions) {
