@@ -747,8 +747,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:12
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4xvjR0TnMMwkYzxV6gqY4fbJAdTgRMPrWOhrAnm5g7YVbzsbpQP69OkyxeQuOhVaP/exec';
 
 // ── BINGX API CONFIG ──────────────────────────────────────
-const BINGX_API_KEY = 'BQhMAcjlO9r2MmEChEaPsArhEB7gTFPbFIQ0YDYOPP1b08GujqTyW1g4JUkXL0O77yZaxtARXPEZPilAKXhvMQ';
-const BINGX_SECRET = 'q5uxhqBTPmUi9wCgsn0o99aGbcoYVYzjrjEeiFs6xZBUYb0zQjD98fANpFvDQsx7b0wg6E7MaCH4uUjGwzJg';
+// Keys stored securely in Google Sheet Settings tab (B3, B4)
+// Fetched via Apps Script proxy — not exposed in frontend
 const BINGX_PROXY = 'https://api.allorigins.win/raw?url=';
 
 let allTrades = [];
@@ -863,15 +863,10 @@ async function generateSignature(params, secret) {
 
 async function fetchBingXTrades(endpoint, params) {
   try {
-    const timestamp = Date.now();
-    const allParams = {...params, timestamp};
-    const signature = await generateSignature(allParams, BINGX_SECRET);
-    const queryStr = Object.keys(allParams).sort().map(k => `${k}=${allParams[k]}`).join('&');
-    const url = `https://open-api.bingx.com${endpoint}?${queryStr}&signature=${signature}`;
-    const proxyUrl = BINGX_PROXY + encodeURIComponent(url);
-    const res = await fetch(proxyUrl, {
-      headers: {'X-BX-APIKEY': BINGX_API_KEY}
-    });
+    // Use Apps Script as secure proxy — keys stay in Sheet only
+    const queryParams = Object.keys(params).map(k => `${k}=${params[k]}`).join('&');
+    const proxyUrl = `${APPS_SCRIPT_URL}?action=getBingXTrades&endpoint=${encodeURIComponent(endpoint)}&${queryParams}`;
+    const res = await fetch(proxyUrl);
     const data = await res.json();
     return data;
   } catch(e) {
@@ -916,7 +911,7 @@ function parseBingXTrade(raw, type) {
 }
 
 async function autoImportBingX() {
-  if (!BINGX_API_KEY || !BINGX_SECRET) return;
+  // Keys handled by Apps Script proxy — always proceed
   
   const now = Date.now();
   if (now - lastImportTime < 25000) return; // min 25s between imports
@@ -1443,31 +1438,30 @@ async function _fetchGold() {
 }
 
 // ── BINGX OPEN POSITIONS — Dashboard ─────────────────────
-const _BXKEY = 'BQhMAcjlO9r2MmEChEaPsArhEB7gTFPbFIQ0YDYOPP1b08GujqTyW1g4JUkXL0O77yZaxtARXPEZPilAKXhvMQ';
-const _BXSEC = 'q5uxhqBTPmUi9wCgsn0o99aGbcoYVYzjrjEeiFs6xZBUYb0zQjD98fANpFvDQsx7b0wg6E7MaCH4uUjGwzJg';
+// Uses Apps Script as secure proxy — API keys stored in Sheet only
+
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4xvjR0TnMMwkYzxV6gqY4fbJAdTgRMPrWOhrAnm5g7YVbzsbpQP69OkyxeQuOhVaP/exec';
 
 async function _fetchBingXPositions() {
   try {
-    const ts  = Date.now();
-    const q   = `timestamp=${ts}`;
-    const enc = new TextEncoder();
-    const key = await crypto.subtle.importKey('raw',enc.encode(_BXSEC),{name:'HMAC',hash:'SHA-256'},false,['sign']);
-    const sig = await crypto.subtle.sign('HMAC',key,enc.encode(q));
-    const hex = Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    const res = await fetch(`https://open-api.bingx.com/openApi/swap/v2/user/positions?${q}&signature=${hex}`,{headers:{'X-BX-APIKEY':_BXKEY}});
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getBingXPositions`);
     const data = await res.json();
-    if (data.code===0 && data.data) {
-      const active = data.data.filter(p=>parseFloat(p.positionAmt||0)!==0);
+    if (data.code === 0 && data.data) {
+      const active = data.data.filter(p => parseFloat(p.positionAmt || 0) !== 0);
       _renderBingXPositions(active);
-      // Update prices map with BingX live prices
+      // Update prices map with BingX live mark prices
       active.forEach(p => {
-        const sym = p.symbol.replace('-USDT','');
-        const livePrice = parseFloat(p.markPrice||p.entryPrice||0);
+        const sym = p.symbol.replace('-USDT', '');
+        const livePrice = parseFloat(p.markPrice || p.entryPrice || 0);
         if (livePrice && sym) prices[sym] = livePrice;
       });
       if (active.length) renderOpenTrade();
+    } else if (data.code !== 0) {
+      console.warn('BingX Positions:', data.msg || 'No data');
     }
-  } catch(e) {}
+  } catch(e) {
+    console.warn('BingX position fetch failed:', e);
+  }
 }
 
 function _renderBingXPositions(positions) {
